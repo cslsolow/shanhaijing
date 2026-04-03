@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "lastCompiled": "2026-04-03T12:00:00Z",
+  "files": {
+    "paper-attention-is-all-you-need.md": {
+      "hash": "example-hash-placeholder-1",
+      "concepts": ["self-attention", "transformer", "multi-head-attention", "positional-encoding"],
+      "title": "Attention Is All You Need",
+      "description": "Introduces the Transformer architecture based on self-attention, replacing recurrence for sequence transduction with 28.4 BLEU EN-DE",
+      "lastCompiled": "2026-04-03T12:00:00Z"
+    },
+    "paper-scaling-laws.md": {
+      "hash": "example-hash-placeholder-2",
+      "concepts": ["scaling-laws", "transformer", "compute-optimal-training"],
+      "title": "Scaling Laws for Neural Language Models",
+      "description": "Empirical power-law scaling of Transformer LM loss with model size, data, and compute; larger models are more sample-efficient",
+      "lastCompiled": "2026-04-03T12:00:00Z"
+    },
+    "experience-debugging-cuda-oom.md": {
+      "hash": "example-hash-placeholder-3",
+      "concepts": ["gpu-memory-optimization", "transformer", "mixed-precision-training", "deepspeed"],
+      "title": "Experience: Debugging CUDA OOM in Large Model Training",
+      "description": "Practical debugging of CUDA OOM errors in 7B+ model training: causes, tools, and solutions including gradient checkpointing, DeepSpeed ZeRO, and bf16",
+      "lastCompiled": "2026-04-03T12:00:00Z"
+    }
+  },
+  "concepts": {
+    "self-attention": {
+      "sources": ["paper-attention-is-all-you-need.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "transformer": {
+      "sources": ["paper-attention-is-all-you-need.md", "paper-scaling-laws.md", "experience-debugging-cuda-oom.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "multi-head-attention": {
+      "sources": ["paper-attention-is-all-you-need.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "positional-encoding": {
+      "sources": ["paper-attention-is-all-you-need.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "scaling-laws": {
+      "sources": ["paper-scaling-laws.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "compute-optimal-training": {
+      "sources": ["paper-scaling-laws.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "gpu-memory-optimization": {
+      "sources": ["experience-debugging-cuda-oom.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "mixed-precision-training": {
+      "sources": ["experience-debugging-cuda-oom.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    },
+    "deepspeed": {
+      "sources": ["experience-debugging-cuda-oom.md"],
+      "lastUpdated": "2026-04-03T12:00:00Z"
+    }
+  }
+}
