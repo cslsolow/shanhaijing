@@ -4,6 +4,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.venv/
 
 # OS
 .DS_Store
@@ -13,5 +14,10 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Knowledge base state (user-specific, not committed)
+# Claude Code (project-local, not committed)
+CLAUDE.md
+.claude/
+
+# Knowledge base state & config (user-specific, not committed)
 # .wiki_state.json  — uncomment if you don't want state in git
+.shj.config.json

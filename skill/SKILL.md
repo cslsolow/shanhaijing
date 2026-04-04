@@ -21,7 +21,7 @@ Incrementally compile raw documents into a structured, LLM-readable markdown wik
 | `init` | `/shj init [path]` | Create directory scaffold + empty state |
 | `ingest` | `/shj ingest <url\|file>` | Import source → preprocess → LLM structurize → store in raw/ |
 | `compile` | `/shj compile [path]` | Process new/changed raw docs, update wiki/ |
-| `query` | `/shj query "question"` | Answer question from wiki with citations |
+| `query` | `/shj query "question" [--model <model>]` | Answer question from wiki with citations; default model: `claude-haiku-4-5` |
 | `lint` | `/shj lint [path]` | Health check: broken links, orphans, gaps |
 
 Default path is the current working directory. Look for `raw/` and `wiki/` relative to that path.
@@ -49,10 +49,18 @@ The skill operates on this structure:
 
 ## Init Workflow
 
-1. Create directories: `raw/`, `wiki/summaries/`, `wiki/concepts/`
+Resolve the base directory:
+- `/shj init <path>` → use `<path>` as base (create if not exists)
+- `/shj init` (no argument) → use current working directory (`$PWD`) as base
+
+Steps:
+1. Create directories under base: `raw/`, `wiki/summaries/`, `wiki/concepts/`
 2. Write empty `wiki/_index.md` with header
 3. Write initial `.wiki_state.json` with `{"version": 1, "files": {}, "concepts": {}}`
-4. Print confirmation
+4. Print the resolved base path and confirm
+5. If `raw/` contains any `.md` files, automatically run the Compile workflow on the base path
+
+All subsequent commands (`ingest`, `compile`, `query`, `lint`) follow the same path resolution: explicit `[path]` argument takes priority, otherwise use `$PWD`.
 
 ## Ingest Workflow
 
@@ -86,7 +94,11 @@ Consult `references/compile-workflow.md` for the full algorithm.
 
 Key: process only the delta. Batch in groups of 10 if >20 files changed, writing state after each batch.
 
+If non-markdown files (PDF, etc.) are found in `raw/` and have no entry in `.wiki_state.json`, automatically run the Ingest workflow on each before compiling. Do not skip them silently.
+
 ## Query Workflow
+
+Default model: `claude-haiku-4-5`. Override with `--model <model>` (e.g. `--model claude-sonnet-4-5`).
 
 1. Read `wiki/_index.md` to get the full article inventory (~500 lines ≈ ~10K tokens)
 2. From the index, select 3-7 articles most relevant to the question
@@ -147,4 +159,5 @@ For detailed workflows and schemas, consult:
 Preprocessing utilities in `scripts/`:
 - **`scripts/web_clip.py`** — URL → raw markdown via trafilatura
 - **`scripts/pdf_to_md.py`** — PDF → raw markdown via pymupdf4llm
-- **`scripts/requirements.txt`** — Python dependencies
+
+Dependencies managed via `pyproject.toml` at repo root. Install with `uv sync`.

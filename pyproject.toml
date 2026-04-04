@@ -1,0 +1,15 @@
+[project]
+name = "shanhaijing"
+version = "0.1.0"
+description = "LLM-compiled personal knowledge base"
+requires-python = ">=3.11"
+dependencies = [
+    "flask",
+    "trafilatura",
+    "pymupdf4llm",
+    "anthropic>=0.89.0",
+    "openai>=2.30.0",
+]
+
+[project.scripts]
+shj = "main:main"

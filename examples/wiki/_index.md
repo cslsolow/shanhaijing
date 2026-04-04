@@ -1,16 +1,22 @@
 # Knowledge Base Index
 
-Last compiled: 2026-04-03T12:00:00Z
-Articles: 3 summaries, 2 concepts
+Last compiled: 2026-04-03
+Articles: 2 summaries, 10 concepts
 
 ## Summaries
 
-- [experience-debugging-cuda-oom](summaries/experience-debugging-cuda-oom.md) — Practical debugging of CUDA OOM errors in 7B+ model training: causes, tools, and solutions including gradient checkpointing, DeepSpeed ZeRO, and bf16
-- [paper-attention-is-all-you-need](summaries/paper-attention-is-all-you-need.md) — Introduces the Transformer architecture based on self-attention, replacing recurrence for sequence transduction with 28.4 BLEU EN-DE
-- [paper-scaling-laws](summaries/paper-scaling-laws.md) — Empirical power-law scaling of Transformer LM loss with model size, data, and compute; larger models are more sample-efficient
+- [README](summaries/README.md) — Shanhaijing skill overview: LLM-compiled personal knowledge base with incremental compile, no vector DB, Obsidian-compatible wikilink output.
+- [2405.15793v3](summaries/2405.15793v3.md) — SWE-agent (NeurIPS 2024): proposes Agent-Computer Interface (ACI) concept, achieves 12.47% pass@1 on SWE-bench with GPT-4 Turbo via LM-tailored interface design.
 
 ## Concepts
 
-- [scaling-laws](concepts/scaling-laws.md) — Power-law relationships between model performance and size/data/compute enabling predictive training planning
-- [self-attention](concepts/self-attention.md) — Mechanism computing context-aware sequence representations via learned Q/K/V projections with O(1) positional connectivity
-- [transformer](concepts/transformer.md) — Attention-only neural architecture foundational to modern LLMs, ViT, and multimodal models
+- [llm-compiled-wiki](concepts/llm-compiled-wiki.md) — Architecture where an LLM acts as compiler, reading raw docs and outputting structured summaries and concept articles without embeddings or vector DBs.
+- [incremental-compile](concepts/incremental-compile.md) — Compile strategy using SHA-256 hashes to process only new/changed files, keeping compile time proportional to change volume.
+- [wikilinks](concepts/wikilinks.md) — [[article-name]] link format connecting summaries to concepts, forming a knowledge graph navigable by humans and LLMs.
+- [personal-knowledge-base](concepts/personal-knowledge-base.md) — Structured personal collection of notes and concepts compiled automatically from raw URLs, PDFs, and notes.
+- [agent-computer-interface](concepts/agent-computer-interface.md) — Abstraction layer between LM agent and computer defining available commands and feedback format; LM agents are a new category of end user requiring purpose-built interfaces.
+- [aci-design-principles](concepts/aci-design-principles.md) — Four principles for effective ACI design: simple commands, compact actions, concise feedback, and guardrails for error recovery.
+- [swe-bench](concepts/swe-bench.md) — Benchmark for LM agents solving real GitHub issues in code repositories; SWE-agent achieved 12.47% pass@1 at time of publication.
+- [lm-agent](concepts/lm-agent.md) — LM-based autonomous system that iteratively takes actions and receives environment feedback (ReAct) to complete complex multi-step tasks.
+- [software-engineering-automation](concepts/software-engineering-automation.md) — Using LM agents to autonomously locate bugs, edit code, and run tests in real repositories without modifying model weights.
+- [react-framework](concepts/react-framework.md) — Agent interaction paradigm combining Reasoning and Acting: each step outputs thought + command, receives execution feedback, iterates toward goal.
