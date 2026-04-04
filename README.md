@@ -3,7 +3,7 @@
 
   # Shanhaijing 山海经
 
-  LLM-compiled personal knowledge base. Ingest raw documents, compile them into a structured markdown wiki, query with natural language.
+  Federated knowledge network. Compile personal knowledge bases, share publicly, discover and query others' knowledge.
 
   ![License](https://img.shields.io/badge/license-MIT-gray?style=flat-square)
   ![Python](https://img.shields.io/badge/python-3.11+-blue?style=flat-square)
@@ -12,128 +12,168 @@
 
 ---
 
-## What It Does
+## Vision
+
+Everyone's brain is different. Your reading, work experience, research, and life lessons are unique knowledge. But they're isolated in your head.
+
+**Shanhaijing** is a system to:
+1. **Extract** your knowledge from raw documents (papers, blogs, notes, personal experience)
+2. **Structure** it as a queryable wiki with concepts, summaries, and cross-references
+3. **Share** publicly (or keep private) in a decentralized registry
+4. **Discover** and **query** other people's knowledge as if it were your own
+
+Imagine searching across thousands of people's brains — asking a question and getting answers backed by everyone's collective experience.
+
+## How It Works
+
+### Phase 1: Personal Knowledge Base (Current)
 
 ```
-raw/                        wiki/
-  paper.md          →         _index.md          (master index)
-  blog.md           →         summaries/         (one per raw doc)
-  experience.md     →         concepts/          (auto-extracted)
+Your raw docs          Your structured wiki
+  papers.md       →      _index.md (searchable)
+  blogs.md        →      summaries/ (per document)
+  notes.md        →      concepts/ (auto-extracted)
 ```
 
-- **Ingest**: Feed URLs (blogs, arxiv), PDFs, markdown, or personal experience. LLM converts everything to structured markdown.
-- **Compile**: Incrementally build a wiki with summaries, concept articles, cross-references (`[[wikilinks]]`), and a master index.
-- **Query**: Ask questions. LLM reads the index, pulls relevant articles, synthesizes answers with citations.
-- **Lint**: Health check — broken links, orphaned articles, stale summaries, concept gaps.
+**Three ways to use:**
 
-No vector DB. No RAG pipeline. The LLM reads `_index.md` directly. Works up to ~500 articles.
+1. **CLI mode** (no Claude Code required)
+   ```bash
+   uv run main.py compile ./myknowledge
+   uv run main.py query "What is attention?"
+   ```
 
-## Install
+2. **Claude Code skill** (`/shj` commands)
+   ```
+   /shj compile ./myknowledge
+   /shj query "What is attention?"
+   ```
 
-Requires [uv](https://docs.astral.sh/uv/).
+3. **Web UI** (streaming, model configuration)
+   ```bash
+   uv run web/server.py --kb ./myknowledge
+   # open http://127.0.0.1:8000
+   ```
+
+### Phase 2: Public Registry + Sharing (Near-term)
+
+- Mark articles as `public` or `private`
+- Publish your wiki to a static site
+- Register your wiki in a central discovery index
+- Query multiple wikis at once
+
+### Phase 3: Federated Query Network (Long-term)
+
+- Search across all public wikis in the registry
+- Answers pull knowledge from anyone's wiki
+- Your concepts are linked and traceable to their sources
+- Distributed, no central authority
+
+## Install & Quick Start
 
 ```bash
 git clone https://github.com/cslsolow/shanhaijing.git
 cd shanhaijing
 uv sync
-```
 
-To also use as a Claude Code skill:
+# Set up API (Anthropic or any OpenAI-compatible)
+export OPENAI_API_KEY=sk-...
 
-```bash
-ln -s $(pwd)/skill ~/.claude/skills/shanhaijing
-```
-
-## Usage
-
-### Direct CLI (any model, no Claude Code required)
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY
-
+# Initialize knowledge base
 uv run main.py init ./myknowledge
+
+# Ingest some documents (future: /shj ingest)
+cp ./my-research-notes.md ./myknowledge/raw/
+
+# Compile into wiki
 uv run main.py compile ./myknowledge
-uv run main.py query "What is self-attention?" --kb ./myknowledge
-uv run main.py lint ./myknowledge
+
+# Query
+uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
 ```
 
-Configure model and provider:
-
-```bash
-# Use Anthropic (default)
-uv run main.py config ./myknowledge --set provider=anthropic model=claude-sonnet-4-5
-
-# Use OpenAI-compatible (Ollama, DeepSeek, etc.)
-uv run main.py config ./myknowledge --set provider=openai model=llama3 base_url=http://localhost:11434/v1
-```
-
-Config is stored in `<kb>/.shj.config.json`. API keys always come from environment variables.
-
-### Claude Code Skill
-
-```
-/shj init ./myknowledge
-/shj ingest https://arxiv.org/abs/2405.15793
-/shj compile ./myknowledge
-/shj query "What is SWE-agent?"
-/shj lint ./myknowledge
-```
-
-### Web UI
-
-```bash
-uv run web/server.py --kb ./myknowledge
-# open http://127.0.0.1:8000
-```
-
-The web UI calls the model API directly (streaming). Click ⚙ in the sidebar to configure provider/model/base URL.
-
-## How It Works
+## Features
 
 ### Compile
 
-1. Hash all files in `raw/` (SHA-256)
-2. Compare with `.wiki_state.json` → find new/changed/deleted
-3. For each changed file: generate summary + extract concepts
-4. Generate/update concept articles
-5. Rebuild `_index.md`
-6. Save state
-
-Only processes the delta. State file enables crash recovery.
+- **Incremental processing**: SHA-256 hashing tracks changes, only re-compiles delta
+- **Auto-summarization**: LLM generates 150-400 word summaries per document
+- **Concept extraction**: Auto-discovers 2-8 key concepts per document
+- **Cross-references**: Generates concept articles with `[[wikilinks]]`
+- **State tracking**: `.wiki_state.json` enables crash recovery
 
 ### Query
 
-1. Read `_index.md` (lightweight — one line per article)
-2. LLM selects 3-7 relevant articles
-3. Read articles, synthesize answer with `[[wikilink]]` citations
+- **Lightweight retrieval**: LLM reads summary index only (~10K tokens)
+- **Selective reading**: Pulls 3-7 relevant full articles on-demand
+- **Citation tracking**: Answers include `[[wikilink]]` references to sources
+- **Streaming output**: Real-time token delivery
 
-### Model Support
+### Model Flexibility
 
-| Provider | Config | API Key env |
-|----------|--------|-------------|
-| Anthropic | `provider=anthropic` | `ANTHROPIC_API_KEY` |
-| OpenAI | `provider=openai` | `OPENAI_API_KEY` |
-| Ollama / local | `provider=openai`, `base_url=http://localhost:11434/v1` | not required |
-| DeepSeek, etc. | `provider=openai`, `base_url=<endpoint>` | `OPENAI_API_KEY` |
+| Provider | API Key env | Notes |
+|----------|-------------|-------|
+| **Anthropic** | `ANTHROPIC_API_KEY` | Default: claude-haiku-4-5 |
+| **OpenAI** | `OPENAI_API_KEY` | gpt-4o, gpt-4 turbo, etc. |
+| **Ollama** (local) | not required | `base_url=http://localhost:11434/v1` |
+| **DeepSeek** | `OPENAI_API_KEY` | Private endpoints supported |
+
+Configure via CLI or Web UI settings panel. Config file (`.shj.config.json`) is git-ignored.
 
 ## Output Format
 
-Standard markdown + `[[wikilinks]]`. Open `wiki/` as an Obsidian vault for graph view, backlinks, and search.
+Standard markdown + `[[wikilinks]]` — fully compatible with Obsidian. Open `wiki/` as a vault for:
+- Graph visualization of concepts
+- Backlink navigation
+- Full-text search
+- Note-taking
 
 ## Example
 
-See `examples/` for a sample knowledge base compiled from research papers.
+`examples/` contains a sample knowledge base compiled from a research paper on SWE-agent. Query it:
+
+```bash
+uv run main.py query "What is agent-computer interface?" --kb ./examples
+```
+
+## Project Philosophy
+
+- **No vector DB, no RAG**: LLM reads the index directly — simpler, cheaper, transparent
+- **Incremental**: Only reprocess changed files
+- **Obsidian-native**: Open `wiki/` as a vault out of the box
+- **Decentralized**: Each person owns their knowledge base; opt-in sharing
+- **Portable**: Markdown everywhere — no lock-in
 
 ## Roadmap
 
-- [x] Phase 1: Core (init, ingest, compile, query, lint) + Web UI + direct API mode
-- [ ] Phase 2: `distill` command (any input → structured knowledge entry), public/private separation, static site export
-- [ ] Phase 3: Federated public wiki registry, cross-KB linking, global search
+| Phase | Focus | Timeline |
+|-------|-------|----------|
+| **1** | Core skill + direct API mode + Web UI | ✅ Done |
+| **2** | Public/private separation, publish command, static site export | Q2 2026 |
+| **3** | Federated registry, cross-KB querying, global discovery | Q3 2026+ |
+
+## Future: Federated Knowledge Network
+
+```
+Your Wiki          Alice's Wiki        Bob's Wiki
+  (public)           (public)            (public)
+      ↓                  ↓                   ↓
+   [Central Registry] ← auto-register
+      ↓
+  [Global Query]
+  "What is self-attention?"
+      ↓
+  Returns answers from all three wikis with citations
+```
 
 ## Name
 
-山海经 (Shānhǎi Jīng, "Classic of Mountains and Seas") — an ancient Chinese encyclopedia of geography, mythology, and natural knowledge.
+山海经 (*Shānhǎi Jīng*, "Classic of Mountains and Seas") — an ancient Chinese encyclopedia. This project is a modern, collaborative encyclopedia of human knowledge, compiled by LLMs and owned by everyone.
 
 ## License
 
 MIT
+
+---
+
+**Start with your own knowledge. End with everyone's knowledge.**
