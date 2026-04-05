@@ -24,99 +24,62 @@ Everyone's brain is different. Your reading, work experience, research, and life
 
 Imagine searching across thousands of people's brains — asking a question and getting answers backed by everyone's collective experience.
 
-## How It Works
+## Two Ways to Use
 
-### Phase 1: Personal Knowledge Base (Current)
+Every feature works in both modes. Choose based on your setup:
 
-```
-Your raw docs              Your structured wiki
-  papers.md       →          _index.md (searchable)
-  blogs.md        →          summaries/ (per document)
-  notes.md        →          concepts/ (auto-extracted)
-  zotero sync     →          raw/zotero-*.md
-  notion sync     →          raw/notion-*.md
-```
+### Mode 1: Python CLI (private API)
 
-**Four ways to feed your knowledge base:**
-
-1. **Drop files** — copy any `.md` into `raw/` and compile
-2. **Distill** — pipe a thought, sentence, or fragment directly into the wiki
-3. **Sync Notion** — pull pages and databases from your Notion workspace
-4. **Sync Zotero** — pull papers + notes from your Zotero library (with PDF full-text for unannotated items)
-
-**Two ways to use:**
-
-1. **CLI mode** (no Claude Code required)
-   ```bash
-   uv run main.py compile ./myknowledge
-   uv run main.py query "What is attention?"
-   uv run main.py distill "attention and memory retrieval are the same thing" --kb ./myknowledge
-   uv run main.py sync --kb ./myknowledge
-   ```
-
-2. **Claude Code skill** (`/shj` commands)
-   ```
-   /shj compile ./myknowledge
-   /shj query "What is attention?"
-   ```
-
-### Phase 2: Public Registry + Sharing (Near-term)
-
-- Mark articles as `public` or `private`
-- Publish your wiki to a static site
-- Register your wiki in a central discovery index
-- Query multiple wikis at once
-
-### Phase 3: Federated Query Network (Long-term)
-
-- Search across all public wikis in the registry
-- Answers pull knowledge from anyone's wiki
-- Your concepts are linked and traceable to their sources
-- Distributed, no central authority
-
-## Install & Quick Start
+Uses your own API key configured in `.shj.config.json`. Supports Anthropic, OpenAI-compatible endpoints (Ollama, DeepSeek, etc.).
 
 ```bash
-git clone https://github.com/cslsolow/shanhaijing.git
-cd shanhaijing
-uv sync
-
-# Set up API (Anthropic or any OpenAI-compatible)
-export OPENAI_API_KEY=sk-...
-
-# Initialize knowledge base
-uv run main.py init ./myknowledge
-
-# Drop some documents
-cp ./my-research-notes.md ./myknowledge/raw/
-
-# Compile into wiki
 uv run main.py compile ./myknowledge
-
-# Query
-uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
+uv run main.py query "What is attention?" --kb ./myknowledge
+uv run main.py distill "attention and memory retrieval are the same thing" --kb ./myknowledge
+uv run main.py sync --kb ./myknowledge
+uv run main.py dream ./myknowledge
+uv run main.py dream ./myknowledge --schedule   # nightly cron at 23:00
 ```
+
+### Mode 2: Claude Code Skill (`/shj`)
+
+Uses Claude Code's own Anthropic session — no API key setup needed.
+
+```
+/shj compile ./myknowledge
+/shj query "What is attention?"
+/shj dream ./myknowledge
+```
+
+Both modes produce identical output. Pick the one that fits your workflow.
 
 ## Features
 
 ### Compile
 
-- **Incremental processing**: SHA-256 hashing tracks changes, only re-compiles delta
+Incrementally turn raw docs into a structured wiki.
+
+```bash
+uv run main.py compile ./myknowledge
+```
+
+- **Incremental**: SHA-256 hashing tracks changes, only reprocesses delta
 - **Auto-summarization**: LLM generates 150-400 word summaries per document
-- **Concept extraction**: Auto-discovers 2-8 key concepts per document
-- **Semantic concept merging**: LLM deduplicates concepts across documents — `"transformer model"` merges into `"transformer"` rather than creating a duplicate
-- **Cross-references**: Generates concept articles with `[[wikilinks]]`
-- **State tracking**: `.wiki_state.json` enables crash recovery
+- **Concept extraction**: Discovers 2-8 key concepts per document
+- **Semantic merging**: LLM deduplicates concepts across documents — `"transformer model"` merges into `"transformer"` rather than creating a duplicate
+- **Wikilinks**: Concept articles with `[[cross-references]]`, Obsidian-compatible
 
 ### Distill
 
-Turn any fragment into a structured knowledge entry in one command:
+Turn any fragment into a structured knowledge entry:
 
 ```bash
-uv run main.py distill "attention and memory retrieval are fundamentally the same operation" --kb ./myknowledge
+uv run main.py distill "attention and memory retrieval are fundamentally the same" --kb ./myknowledge
+# or from stdin
+echo "my thought here" | uv run main.py distill --kb ./myknowledge
 ```
 
-The LLM structures it into a titled, linked wiki entry with connections to existing concepts.
+The LLM structures it into a titled, linked wiki entry and auto-compiles it in.
 
 ### Sync
 
@@ -128,31 +91,78 @@ uv run main.py sync --source zotero --kb ./myknowledge
 uv run main.py sync --source notion --kb ./myknowledge
 ```
 
-**Zotero** sync strategy:
-- Items with notes → abstract + notes → markdown
-- Items without notes + PDF attached → full PDF text via LLM → rich markdown
-- Items without notes or PDF → abstract only
+**Zotero** — papers with notes → abstract + notes; papers without notes + PDF → full PDF text via LLM; otherwise abstract only.
 
-**Notion** sync: pages and databases, incremental (skips unchanged pages).
-
-Configure in `.shj.config.json`:
-```json
-{
-  "zotero_api_key": "...",
-  "zotero_user_id": "...",
-  "notion_token": "...",
-  "notion_databases": ["db-id-1"]
-}
-```
+**Notion** — pages and databases, incremental (skips unchanged pages).
 
 ### Query
 
-- **Lightweight retrieval**: LLM reads summary index only (~10K tokens)
-- **Selective reading**: Pulls 3-7 relevant full articles on-demand
-- **Citation tracking**: Answers include `[[wikilink]]` references to sources
-- **Streaming output**: Real-time token delivery
+Lightweight retrieval without vector DB:
 
-### Model Flexibility
+```bash
+uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
+```
+
+LLM reads the summary index (~10K tokens), selects 3-7 relevant articles, synthesizes an answer with `[[wikilink]]` citations.
+
+### Dream
+
+Every night, the knowledge base dreams. It picks concepts that rarely appear together (high friction), then runs a multi-round LLM evolution: each round adds one more concept and rewrites the previous dream to incorporate it, occasionally "forgetting" a prior claim. The result is a chain of drafts culminating in a final essay that surfaces hidden connections across your knowledge.
+
+```bash
+uv run main.py dream ./myknowledge              # run immediately
+uv run main.py dream ./myknowledge --schedule   # register cron at 23:00 local time
+uv run main.py dream ./myknowledge --unschedule # remove cron
+```
+
+Output in `dream/YYYY-MM-DD/`:
+- `v1-<concept>.md`, `v2-<concept>.md`, … — per-round evolution
+- `final.md` — last evolved version with evolution log
+
+Each run picks a random angle (contrarian, analogy, hypothesis, genealogy, critique) and a random seed, so every dream is different.
+
+### Lint
+
+Health check:
+
+```bash
+uv run main.py lint ./myknowledge
+```
+
+Finds broken wikilinks, orphaned articles, uncompiled raw files, stale summaries, concept gaps.
+
+## Install & Quick Start
+
+```bash
+git clone https://github.com/cslsolow/shanhaijing.git
+cd shanhaijing
+uv sync
+```
+
+**Option A — Anthropic API:**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run main.py init ./myknowledge
+```
+
+**Option B — OpenAI-compatible (Ollama, DeepSeek, etc.):**
+```bash
+uv run main.py config ./myknowledge --set provider=openai base_url=http://localhost:11434/v1 model=llama3
+```
+
+**Option C — Claude Code (no API key needed):**
+```
+/shj init ./myknowledge
+```
+
+Then drop files in `raw/` and compile:
+```bash
+cp my-notes.md ./myknowledge/raw/
+uv run main.py compile ./myknowledge
+uv run main.py query "What did I write about?" --kb ./myknowledge
+```
+
+## Model Flexibility
 
 | Provider | API Key env | Notes |
 |----------|-------------|-------|
@@ -161,67 +171,46 @@ Configure in `.shj.config.json`:
 | **Ollama** (local) | not required | `base_url=http://localhost:11434/v1` |
 | **DeepSeek** | `OPENAI_API_KEY` | Private endpoints supported |
 
-Configure via CLI (`uv run main.py config`). Config file (`.shj.config.json`) is git-ignored.
+Configure:
+```bash
+uv run main.py config ./myknowledge --set provider=anthropic model=claude-haiku-4-5
+```
 
-## Raw Directory
-
-`raw/` is the input layer — everything you've read, written, or thought about. Files here are the source of truth; the `wiki/` is always re-derivable from `raw/`.
-
-Each file should have a `source_url` in its frontmatter pointing to the original (DOI, URL, Notion link, etc.). Files without an external source (e.g. distilled thoughts) are themselves the original.
+Config is stored in `.shj.config.json` (git-ignored).
 
 ## Output Format
 
 Standard markdown + `[[wikilinks]]` — fully compatible with Obsidian.
 
-**Open in Obsidian:** point Obsidian's vault to the `wiki/` folder inside your KB (e.g. `Open folder as vault → myknowledge/wiki/`). No setup needed — wikilinks, graph view, and backlinks all work out of the box.
-
-- Graph visualization of concepts
-- Backlink navigation
-- Full-text search
-- Note-taking alongside compiled content
+**Open in Obsidian:** point it to `wiki/` inside your KB (`Open folder as vault → myknowledge/wiki/`). Graph view, backlinks, and full-text search work out of the box.
 
 ## Example
 
-`examples/` contains a sample knowledge base compiled from a research paper on SWE-agent. Query it:
+`examples/` contains a sample KB compiled from a research paper. Try it:
 
 ```bash
 uv run main.py query "What is agent-computer interface?" --kb ./examples
 ```
 
+## Roadmap
+
+| Phase | Focus | Status |
+|-------|-------|--------|
+| **1** | Core compile/query/lint + distill + sync (Notion/Zotero) + dream | ✅ Done |
+| **2** | Public/private separation, publish command, static site export | Q2 2026 |
+| **3** | Federated registry, cross-KB querying, global discovery | Q3 2026+ |
+
 ## Project Philosophy
 
 - **No vector DB, no RAG**: LLM reads the index directly — simpler, cheaper, transparent
 - **Incremental**: Only reprocess changed files
-- **Obsidian-native**: Open `wiki/` as a vault out of the box
-- **Decentralized**: Each person owns their knowledge base; opt-in sharing
-- **Portable**: Markdown everywhere — no lock-in
-- **Your knowledge, not the paper's**: `raw/` should reflect your understanding — notes, highlights, distilled thoughts — not just mirrored full texts
-
-## Roadmap
-
-| Phase | Focus | Timeline |
-|-------|-------|----------|
-| **1** | Core compile/query + sync (Notion/Zotero) + distill | ✅ Done |
-| **2** | Public/private separation, publish command, static site export | Q2 2026 |
-| **3** | Federated registry, cross-KB querying, global discovery | Q3 2026+ |
-
-## Future: Federated Knowledge Network
-
-```
-Your Wiki          Alice's Wiki        Bob's Wiki
-  (public)           (public)            (public)
-      ↓                  ↓                   ↓
-   [Central Registry] ← auto-register
-      ↓
-  [Global Query]
-  "What is self-attention?"
-      ↓
-  Returns answers from all three wikis with citations
-```
+- **Obsidian-native**: `wiki/` opens as a vault out of the box
+- **Decentralized**: Each person owns their KB; opt-in sharing
+- **Your knowledge, not the paper's**: `raw/` should reflect your understanding — notes, highlights, distilled thoughts
 
 ## Name
 
-山海经 (*Shānhǎi Jīng*, "Classic of Mountains and Seas") — an ancient Chinese encyclopedia. This project is a modern, collaborative encyclopedia of human knowledge, compiled by LLMs and owned by everyone.
+山海经 (*Shānhǎi Jīng*, "Classic of Mountains and Seas") — an ancient Chinese encyclopedia. This project is a modern encyclopedia of human knowledge, compiled by LLMs and owned by everyone.
 
 ## License
 
