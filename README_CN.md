@@ -208,7 +208,7 @@ uv run main.py query "什么是 agent-computer interface？" --kb ./examples
 
 | Phase | 重点 | 预期 |
 |-------|------|------|
-| **1** | 核心编译/查询 + 同步（Notion/Zotero）+ 蒸馏 + Web UI + 知识图谱 | ✅ 完成 |
+| **1** | 核心编译/查询 + 同步（Notion/Zotero）+ 蒸馏 | ✅ 完成 |
 | **2** | 公开/私密分离、发布命令、静态站点导出 | 2026 Q2 |
 | **3** | 联邦注册表、跨库查询、全局发现 | 2026 Q3+ |
 

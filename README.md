@@ -44,7 +44,7 @@ Your raw docs              Your structured wiki
 3. **Sync Notion** — pull pages and databases from your Notion workspace
 4. **Sync Zotero** — pull papers + notes from your Zotero library (with PDF full-text for unannotated items)
 
-**Three ways to use:**
+**Two ways to use:**
 
 1. **CLI mode** (no Claude Code required)
    ```bash
@@ -58,12 +58,6 @@ Your raw docs              Your structured wiki
    ```
    /shj compile ./myknowledge
    /shj query "What is attention?"
-   ```
-
-3. **Web UI** (streaming, model configuration, graph view)
-   ```bash
-   uv run web/server.py --kb ./myknowledge
-   # open http://127.0.0.1:8000
    ```
 
 ### Phase 2: Public Registry + Sharing (Near-term)
@@ -158,10 +152,6 @@ Configure in `.shj.config.json`:
 - **Citation tracking**: Answers include `[[wikilink]]` references to sources
 - **Streaming output**: Real-time token delivery
 
-### Knowledge Graph
-
-Visual exploration of concepts and their connections. Open `/graph` in the Web UI to see your wiki as an interactive force-directed graph — nodes are summaries and concepts, edges are `[[wikilinks]]`.
-
 ### Model Flexibility
 
 | Provider | API Key env | Notes |
@@ -171,7 +161,7 @@ Visual exploration of concepts and their connections. Open `/graph` in the Web U
 | **Ollama** (local) | not required | `base_url=http://localhost:11434/v1` |
 | **DeepSeek** | `OPENAI_API_KEY` | Private endpoints supported |
 
-Configure via CLI or Web UI settings panel. Config file (`.shj.config.json`) is git-ignored.
+Configure via CLI (`uv run main.py config`). Config file (`.shj.config.json`) is git-ignored.
 
 ## Raw Directory
 
@@ -211,7 +201,7 @@ uv run main.py query "What is agent-computer interface?" --kb ./examples
 
 | Phase | Focus | Timeline |
 |-------|-------|----------|
-| **1** | Core compile/query + sync (Notion/Zotero) + distill + Web UI + graph | ✅ Done |
+| **1** | Core compile/query + sync (Notion/Zotero) + distill | ✅ Done |
 | **2** | Public/private separation, publish command, static site export | Q2 2026 |
 | **3** | Federated registry, cross-KB querying, global discovery | Q3 2026+ |
 
