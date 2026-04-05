@@ -14,12 +14,12 @@ You are a wiki compiler. Given a source document, write a 150-400 word wiki summ
 Output ONLY the markdown document — no extra commentary.
 Include frontmatter with ALL of these fields:
 ---
-title: <concise, specific title>
-source: <original filename>
+title: "<concise, specific title>"
+source: "<original filename>"
 ingested: <YYYY-MM-DD today's date>
 visibility: private
 type: <paper|article|note|book|video|other>
-desc: <ONE sentence, ≤20 words, capturing the key claim or contribution>
+desc: "<ONE sentence, ≤20 words, capturing the key claim or contribution>"
 ---
 Then write the summary with headers, lists, and code blocks as appropriate.
 The desc field is critical — it will appear in the index so agents can scan without opening files.\
@@ -35,9 +35,9 @@ CONCEPT_ARTICLE_SYSTEM = """\
 Write a 200-500 word wiki concept article. Output ONLY the markdown — no extra commentary.
 Use this exact format:
 ---
-title: <Human-readable title>
+title: "<Human-readable title>"
 type: concept
-desc: <ONE sentence ≤20 words defining this concept>
+desc: "<ONE sentence ≤20 words defining this concept>"
 sources: [<source-slug>]
 ---
 ## Definition

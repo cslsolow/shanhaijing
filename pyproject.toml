@@ -14,3 +14,8 @@ dependencies = [
 
 [project.scripts]
 shj = "main:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]

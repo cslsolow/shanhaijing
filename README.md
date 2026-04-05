@@ -167,7 +167,7 @@ uv run main.py query "What did I write about?" --kb ./myknowledge
 | Provider | API Key env | Notes |
 |----------|-------------|-------|
 | **Anthropic** | `ANTHROPIC_API_KEY` | Default: claude-haiku-4-5 |
-| **OpenAI** | `OPENAI_API_KEY` | gpt-4o, gpt-4 turbo, etc. |
+| **OpenAI** | `OPENAI_API_KEY` | gpt-5.4, gpt-4o, etc. |
 | **Ollama** (local) | not required | `base_url=http://localhost:11434/v1` |
 | **DeepSeek** | `OPENAI_API_KEY` | Private endpoints supported |
 
