@@ -37,7 +37,7 @@ Use this exact format:
 ---
 title: "<Human-readable title>"
 type: concept
-desc: "<ONE sentence ≤20 words defining this concept>"
+desc: "<ONE sentence ≤30 words: what it is and where/why it matters>"
 sources: [<source-slug>]
 ---
 ## Definition
@@ -133,7 +133,7 @@ def _resolve_concepts(cfg, new_concepts: list[str], existing_slugs: list[str]) -
         return [{"input": c, "action": "create", "target": _slugify(c)} for c in new_concepts]
 
 
-def run(kb_path: str, verbose: bool = True, workers: int = 2) -> dict:
+def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
     cfg = cfg_mod.load(kb_path)
     wiki = Path(kb_path) / "wiki"
     (wiki / "summaries").mkdir(parents=True, exist_ok=True)
@@ -156,21 +156,26 @@ def run(kb_path: str, verbose: bool = True, workers: int = 2) -> dict:
         p = Path(kb_path) / rel
         content = p.read_text(encoding="utf-8")
 
-        # 1. Summary
-        summary = llm.call(cfg, SUMMARY_SYSTEM,
-                           f"Filename: {p.name}\n\n{content}", max_tokens=600)
-
+        # 1. Summary — skip LLM if summary already pre-populated
+        # raw stem may have "zotero-" prefix; strip it to find pre-copied summary
         slug = p.stem
-        for line in summary.splitlines():
-            if line.startswith("title:"):
-                title_val = line.split(":", 1)[1].strip().strip('"')
-                derived = _slugify(title_val)
-                if derived and len(derived) > 3:
-                    slug = derived[:60]
-                break
-
-        summary_path = wiki / "summaries" / f"{slug}.md"
-        summary_path.write_text(summary, encoding="utf-8")
+        stripped_stem = re.sub(r"^zotero-", "", slug)
+        prebuilt = wiki / "summaries" / f"{stripped_stem}.md"
+        if prebuilt.exists():
+            summary = prebuilt.read_text(encoding="utf-8")
+            slug = stripped_stem
+        else:
+            summary = llm.call(cfg, SUMMARY_SYSTEM,
+                               f"Filename: {p.name}\n\n{content}", max_tokens=600)
+            for line in summary.splitlines():
+                if line.startswith("title:"):
+                    title_val = line.split(":", 1)[1].strip().strip('"')
+                    derived = _slugify(title_val)
+                    if derived and len(derived) > 3:
+                        slug = derived[:60]
+                    break
+            summary_path = wiki / "summaries" / f"{slug}.md"
+            summary_path.write_text(summary, encoding="utf-8")
 
         # 2. Extract concepts
         concepts_raw = llm.call(cfg, CONCEPTS_SYSTEM,
@@ -293,21 +298,6 @@ def _rebuild_index(wiki: Path, st: dict):
         f"compiled: {today}  |  summaries: {len(summaries)}  |  concepts: {len(concepts)}",
         "",
     ]
-
-    if summaries:
-        lines.append("## Summaries")
-        lines.append("")
-        for p in summaries:
-            fm = _extract_frontmatter(p)
-            title = fm.get("title") or p.stem
-            desc  = fm.get("desc", "")
-            src   = fm.get("source", "")
-            typ   = fm.get("type", "")
-            meta  = "  |  ".join(x for x in [typ, src] if x)
-            desc_part = f" — {desc}" if desc else ""
-            meta_part = f"  `{meta}`" if meta else ""
-            lines.append(f"- [{title}](summaries/{p.name}){desc_part}{meta_part}")
-        lines.append("")
 
     if concepts:
         lines.append("## Concepts")
