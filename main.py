@@ -114,6 +114,24 @@ def cmd_distill(args):
         print("Auto-compiled into wiki.")
 
 
+def cmd_dream(args):
+    from shanhaijing import dream
+    from shanhaijing import config as cfg_mod
+    kb = os.path.abspath(args.kb or ".")
+    cfg = cfg_mod.load(kb)
+
+    if args.schedule:
+        cron = cfg.get("dream_schedule", "0 23 * * *")
+        dream.schedule(kb, cron)
+    elif args.unschedule:
+        dream.unschedule(kb)
+    else:
+        result = dream.run(kb, cfg)
+        if "error" in result:
+            print(f"Error: {result['error']}", file=sys.stderr)
+            sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="shj",
@@ -147,6 +165,12 @@ def main():
                            help="Skip auto-compile after distilling")
 
     # sync subparser
+    p_dream = sub.add_parser("dream", help="Multi-round concept dreaming")
+    p_dream.add_argument("kb", nargs="?", default="")
+    p_dream.add_argument("--now", action="store_true", help="Run immediately (default)")
+    p_dream.add_argument("--schedule", action="store_true", help="Register cron job")
+    p_dream.add_argument("--unschedule", action="store_true", help="Remove cron job")
+
     p_sync = sub.add_parser("sync", help="Pull from Notion/Zotero into raw/ and compile")
     p_sync.add_argument("--kb", default="", help="Knowledge base path")
     p_sync.add_argument("--source", choices=["notion", "zotero"],
@@ -164,6 +188,7 @@ def main():
         "config": cmd_config,
         "distill": cmd_distill,
         "sync": cmd_sync,
+        "dream": cmd_dream,
     }[args.command](args)
 
 

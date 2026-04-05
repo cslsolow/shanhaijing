@@ -16,6 +16,11 @@ DEFAULTS = {
     "zotero_user_id": "",
     "zotero_group_id": "",
     "zotero_collections": [],
+    # Dream
+    "dream_schedule": "0 23 * * *",
+    "dream_interval_min": 45,
+    "dream_token_budget": 30000,
+    "dream_concepts_count": 7,
 }
 
 _LLM_FIELDS = ("provider", "model", "base_url", "api_key")
@@ -23,7 +28,11 @@ _SYNC_FIELDS = (
     "notion_token", "notion_databases", "notion_pages",
     "zotero_api_key", "zotero_user_id", "zotero_group_id", "zotero_collections",
 )
-_FIELDS = _LLM_FIELDS + _SYNC_FIELDS
+_DREAM_FIELDS = (
+    "dream_schedule", "dream_interval_min",
+    "dream_token_budget", "dream_concepts_count",
+)
+_FIELDS = _LLM_FIELDS + _SYNC_FIELDS + _DREAM_FIELDS
 
 
 def load(kb_path: str) -> dict:

@@ -28,3 +28,6 @@ dashboard.html
 
 # Personal knowledge bases (local only)
 public/
+
+# Dream output (local only)
+*/dream/

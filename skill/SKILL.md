@@ -23,6 +23,7 @@ Incrementally compile raw documents into a structured, LLM-readable markdown wik
 | `compile` | `/shj compile [path]` | Process new/changed raw docs, update wiki/ |
 | `query` | `/shj query "question" [--model <model>]` | Answer question from wiki with citations; default model: `claude-haiku-4-5` |
 | `lint` | `/shj lint [path]` | Health check: broken links, orphans, gaps |
+| `dream` | `/shj dream [path]` | Multi-round dreaming across high-friction concepts; stores in `dream/` |
 
 Default path is the current working directory. Look for `raw/` and `wiki/` relative to that path.
 
@@ -135,6 +136,18 @@ The LLM sets `visibility: private` by default during ingest. User changes it man
 - Format: `[[article-name]]` where `article-name` matches filename without `.md`
 - Summaries link to concepts; concepts link to other concepts and back to summaries
 - `_index.md` uses relative markdown links `[title](summaries/slug.md)` for broader compatibility
+
+## Dream Workflow
+
+`/shj dream [path]` runs: `uv run main.py dream <path>`
+
+Python handles the full loop — concept selection, LLM calls, sleep intervals, and file writing. Claude Code is only the trigger.
+
+Output lands in `<base>/dream/YYYY-MM-DD/`:
+- `v1-<concept>.md` through `vN-<concept>.md` — per-round evolution
+- `final.md` — last version with evolution log
+
+To schedule nightly dreams: `/shj dream --schedule` (registers cron at 23:00 local time).
 
 ## Non-goals and Constraints
 
