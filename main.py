@@ -81,6 +81,39 @@ def cmd_config(args):
         print(json.dumps(config.load(kb), indent=2))
 
 
+
+def cmd_sync(args):
+    from shanhaijing import sync
+    kb = os.path.abspath(args.kb or ".")
+    sources = [args.source] if getattr(args, "source", None) else None
+    results = sync.run(kb, sources=sources, auto_compile=not args.no_compile)
+    for src, r in results.items():
+        if src == "compile":
+            print(f"compile: {r.get('new',0)} new, {r.get('changed',0)} changed")
+        elif "error" in r and r["error"] and not r.get("synced"):
+            print(f"{src}: {r['error']}")
+        else:
+            print(f"{src}: {r.get('synced',0)} synced, {r.get('skipped',0)} skipped"
+                  + (f", {r['errors']} errors" if r.get("errors") else ""))
+
+
+def cmd_distill(args):
+    from shanhaijing import distill
+    kb = os.path.abspath(args.kb or ".")
+    text = args.text
+    if not text:
+        print("Enter text (Ctrl+D to finish):")
+        text = sys.stdin.read().strip()
+    if not text:
+        print("No input.", file=sys.stderr)
+        sys.exit(1)
+    result = distill.run(kb, text, auto_compile=not args.no_compile)
+    print(f"Distilled: {result['title']}")
+    print(f"File: {result['file']}")
+    if result['compiled']:
+        print("Auto-compiled into wiki.")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="shj",
@@ -107,6 +140,21 @@ def main():
     p_cfg.add_argument("--set", nargs="*", metavar="key=value",
                        help="e.g. --set provider=openai model=gpt-4o")
 
+    p_distill = sub.add_parser("distill", help="Structure a fragment into knowledge")
+    p_distill.add_argument("text", nargs="?", default="")
+    p_distill.add_argument("--kb", default="")
+    p_distill.add_argument("--no-compile", action="store_true",
+                           help="Skip auto-compile after distilling")
+
+    # sync subparser
+    p_sync = sub.add_parser("sync", help="Pull from Notion/Zotero into raw/ and compile")
+    p_sync.add_argument("--kb", default="", help="Knowledge base path")
+    p_sync.add_argument("--source", choices=["notion", "zotero"],
+                        help="Sync only one source (default: all configured)")
+    p_sync.add_argument("--no-compile", action="store_true",
+                        help="Skip compile after sync")
+    p_sync.set_defaults(command="sync")
+
     args = parser.parse_args()
     {
         "init": cmd_init,
@@ -114,6 +162,8 @@ def main():
         "query": cmd_query,
         "lint": cmd_lint,
         "config": cmd_config,
+        "distill": cmd_distill,
+        "sync": cmd_sync,
     }[args.command](args)
 
 

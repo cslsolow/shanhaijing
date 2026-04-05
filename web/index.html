@@ -225,6 +225,91 @@ body {
 .query-btn:active { transform: scale(0.98); }
 .query-btn:disabled { background: var(--ink-faint); cursor: not-allowed; transform: none; }
 
+.distill-btn {
+  background: transparent;
+  color: var(--ink-mid);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-family: var(--serif);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, transform 0.1s;
+  flex-shrink: 0;
+}
+.distill-btn:hover  { border-color: var(--ink-mid); color: var(--ink); }
+.distill-btn:active { transform: scale(0.98); }
+
+/* ── Distill modal ───────────────────────────────────── */
+.distill-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20,16,12,0.55);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.distill-overlay.open { display: flex; }
+
+.distill-modal {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 28px 32px 24px;
+  width: 520px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+.distill-modal h3 {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--ink);
+  margin: 0;
+}
+.distill-modal h3 span {
+  font-size: 11px;
+  font-family: var(--sans);
+  color: var(--ink-faint);
+  margin-left: 8px;
+  letter-spacing: 0.06em;
+}
+.distill-textarea {
+  width: 100%;
+  min-height: 120px;
+  background: var(--paper-dark);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: var(--serif);
+  color: var(--ink);
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+.distill-textarea:focus { border-color: var(--vermillion); }
+.distill-textarea::placeholder { color: var(--ink-faint); font-style: italic; }
+.distill-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.distill-result {
+  font-size: 12px;
+  font-family: var(--sans);
+  color: var(--ink-mid);
+  line-height: 1.6;
+  display: none;
+}
+.distill-result.visible { display: block; }
+
 /* ── Content ─────────────────────────────────────────── */
 .content {
   flex: 1;
@@ -454,6 +539,28 @@ body {
 
 .settings-toggle:hover { color: var(--ink-mid); }
 
+.sidebar-nav {
+  border-bottom: 1px solid var(--rule);
+  padding: 4px 0;
+}
+.sidebar-nav-btn {
+  display: block;
+  width: 100%;
+  padding: 9px 32px;
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  color: var(--ink-faint);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.15s, background 0.15s;
+}
+.sidebar-nav-btn:hover {
+  color: var(--ink);
+  background: var(--paper-dark);
+}
+
 .settings-panel {
   padding: 4px 24px 16px 32px;
   display: flex;
@@ -541,22 +648,45 @@ body {
     <div style="padding:20px 32px;color:var(--ink-faint);font-size:12px;font-family:var(--sans);font-weight:300;">载入中…</div>
   </div>
   <div class="sidebar-settings">
-    <button class="settings-toggle" onclick="toggleSettings()">⚙ 模型配置</button>
-    <div class="settings-panel" id="settings-panel" style="display:none">
-      <label>Provider</label>
-      <select id="cfg-provider">
-        <option value="anthropic">Anthropic</option>
-        <option value="openai">OpenAI-compatible</option>
-      </select>
-      <label>Model</label>
-      <input id="cfg-model" type="text" placeholder="claude-haiku-4-5">
-      <label>Base URL <span class="cfg-hint">(optional)</span></label>
-      <input id="cfg-baseurl" type="text" placeholder="https://api.openai.com/v1">
-      <label>API Key <span class="cfg-hint">(optional, overrides env var)</span></label>
-      <input id="cfg-apikey" type="password" placeholder="sk-...">
-      <button class="cfg-save" onclick="saveSettings()">保存 · Save</button>
-    </div>
+  <div class="sidebar-nav">
+    <a class="sidebar-nav-btn" href="/graph">◈ 山海界 · Realm</a>
   </div>
+  <button class="settings-toggle" onclick="toggleSettings()">⚙ 模型配置 · Model Config</button>
+  <div class="settings-panel" id="settings-panel" style="display:none">
+    <label>Provider</label>
+    <select id="cfg-provider">
+      <option value="anthropic">Anthropic</option>
+      <option value="openai">OpenAI-compatible</option>
+    </select>
+    <label>Model</label>
+    <input id="cfg-model" type="text" placeholder="claude-haiku-4-5">
+    <label>Base URL <span class="cfg-hint">(optional)</span></label>
+    <input id="cfg-baseurl" type="text" placeholder="https://api.openai.com/v1">
+    <label>API Key <span class="cfg-hint">(optional, overrides env var)</span></label>
+    <input id="cfg-apikey" type="password" placeholder="sk-...">
+    <div style="border-top:1px solid var(--rule);margin:10px 0 6px;padding-top:6px;">
+      <label style="color:var(--ink-mid);">Notion</label>
+      <label>Integration Token</label>
+      <input id="cfg-notion-token" type="password" placeholder="secret_...">
+      <label>Database IDs <span class="cfg-hint">(comma-separated)</span></label>
+      <input id="cfg-notion-dbs" type="text" placeholder="abc123, def456">
+      <label>Page IDs <span class="cfg-hint">(comma-separated, optional)</span></label>
+      <input id="cfg-notion-pages" type="text" placeholder="optional">
+    </div>
+    <div style="border-top:1px solid var(--rule);margin:6px 0;padding-top:6px;">
+      <label style="color:var(--ink-mid);">Zotero</label>
+      <label>API Key</label>
+      <input id="cfg-zotero-key" type="password" placeholder="your zotero api key">
+      <label>User ID <span class="cfg-hint">(or leave blank for group)</span></label>
+      <input id="cfg-zotero-uid" type="text" placeholder="12345678">
+      <label>Group ID <span class="cfg-hint">(optional)</span></label>
+      <input id="cfg-zotero-gid" type="text" placeholder="optional">
+      <label>Collection Keys <span class="cfg-hint">(comma-separated, blank = all)</span></label>
+      <input id="cfg-zotero-cols" type="text" placeholder="blank = entire library">
+    </div>
+    <button class="cfg-save" onclick="saveSettings()">保存 · Save</button>
+  </div>
+</div>
 </div>
 
 <div class="main">
@@ -564,7 +694,23 @@ body {
     <input class="query-input" id="query-input" type="text"
            placeholder="向知识库提问 · Ask your knowledge base…" autocomplete="off">
     <button class="query-btn" id="query-btn" onclick="doQuery()">问 / Ask</button>
+    <button class="distill-btn" onclick="openDistill()">蒸 / Distill</button>
+    <button class="distill-btn" id="sync-btn" onclick="doSync()" title="从 Notion/Zotero 同步 · Sync from Notion/Zotero">↻ 同步 / Sync</button>
   </div>
+
+<!-- Distill modal -->
+<div class="distill-overlay" id="distill-overlay" onclick="if(event.target===this)closeDistill()">
+  <div class="distill-modal">
+    <h3>蒸馏 <span>Fragment → Knowledge</span></h3>
+    <textarea class="distill-textarea" id="distill-input"
+      placeholder="输入任意碎片——一句话、一段对话、一个想法… / Any fragment: a thought, quote, conversation…"></textarea>
+    <div class="distill-result" id="distill-result"></div>
+    <div class="distill-actions">
+      <button class="distill-btn" onclick="closeDistill()">取消 / Cancel</button>
+      <button class="query-btn" id="distill-submit" onclick="doDistill()">蒸馏 / Distill</button>
+    </div>
+  </div>
+</div>
 
   <div class="content" id="content">
     <div class="welcome">
@@ -724,16 +870,37 @@ async function loadSettings() {
     const keyInput = document.getElementById('cfg-apikey');
     keyInput.value = '';
     keyInput.placeholder = cfg.api_key || 'sk-... (leave blank to keep current)';
+    // Sync config
+    document.getElementById('cfg-notion-token').placeholder =
+      cfg.notion_token ? '(set — leave blank to keep)' : 'secret_...';
+    document.getElementById('cfg-notion-dbs').value =
+      (cfg.notion_databases || []).join(', ');
+    document.getElementById('cfg-notion-pages').value =
+      (cfg.notion_pages || []).join(', ');
+    document.getElementById('cfg-zotero-key').placeholder =
+      cfg.zotero_api_key ? '(set — leave blank to keep)' : 'your zotero api key';
+    document.getElementById('cfg-zotero-uid').value = cfg.zotero_user_id || '';
+    document.getElementById('cfg-zotero-gid').value = cfg.zotero_group_id || '';
+    document.getElementById('cfg-zotero-cols').value =
+      (cfg.zotero_collections || []).join(', ');
   } catch(e) {}
 }
 
 async function saveSettings() {
   const keyInput = document.getElementById('cfg-apikey');
+  const splitIds = s => s.split(',').map(x => x.trim()).filter(Boolean);
   const cfg = {
     provider: document.getElementById('cfg-provider').value,
     model: document.getElementById('cfg-model').value.trim(),
     base_url: document.getElementById('cfg-baseurl').value.trim(),
-    api_key: keyInput.value.trim(),  // empty = keep existing (server merges)
+    api_key: keyInput.value.trim(),
+    notion_token: document.getElementById('cfg-notion-token').value.trim(),
+    notion_databases: splitIds(document.getElementById('cfg-notion-dbs').value),
+    notion_pages: splitIds(document.getElementById('cfg-notion-pages').value),
+    zotero_api_key: document.getElementById('cfg-zotero-key').value.trim(),
+    zotero_user_id: document.getElementById('cfg-zotero-uid').value.trim(),
+    zotero_group_id: document.getElementById('cfg-zotero-gid').value.trim(),
+    zotero_collections: splitIds(document.getElementById('cfg-zotero-cols').value),
   };
   await fetch('/api/config', {
     method: 'POST',
@@ -747,6 +914,93 @@ async function saveSettings() {
 
 loadArticles();
 loadSettings();
+
+function openDistill() {
+  document.getElementById('distill-overlay').classList.add('open');
+  document.getElementById('distill-input').focus();
+  document.getElementById('distill-result').className = 'distill-result';
+  document.getElementById('distill-result').textContent = '';
+}
+
+function closeDistill() {
+  document.getElementById('distill-overlay').classList.remove('open');
+}
+
+async function doDistill() {
+  const text = document.getElementById('distill-input').value.trim();
+  if (!text) return;
+
+  const btn = document.getElementById('distill-submit');
+  const resultEl = document.getElementById('distill-result');
+  btn.disabled = true;
+  btn.textContent = '蒸馏中… / Distilling';
+  resultEl.className = 'distill-result';
+
+  try {
+    const res = await fetch('/api/distill', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: text, auto_compile: true }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    resultEl.className = 'distill-result visible';
+    resultEl.innerHTML =
+      `✓ 已蒸馏：<strong>${data.title || '（无标题）'}</strong><br>` +
+      `${data.file}${data.compiled ? ' · wiki 已更新' : ''}`;
+    document.getElementById('distill-input').value = '';
+    loadArticles();
+    statusEl.textContent = `蒸馏完成：${data.title}`;
+  } catch(e) {
+    resultEl.className = 'distill-result visible';
+    resultEl.style.color = 'var(--vermillion)';
+    resultEl.textContent = `蒸馏失败：${e.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '蒸馏 / Distill';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDistill();
+});
+
+async function doSync(source) {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+  btn.textContent = '↻ 同步中…';
+  statusEl.textContent = '同步中… Syncing';
+
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: source || null, auto_compile: true }),
+    });
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    const parts = [];
+    for (const [src, r] of Object.entries(data)) {
+      if (src === 'compile') {
+        parts.push(`compile: ${r.new||0} new`);
+      } else if (r.error && !r.synced) {
+        parts.push(`${src}: ${r.error}`);
+      } else {
+        parts.push(`${src}: ${r.synced||0} synced`);
+      }
+    }
+    statusEl.textContent = '同步完成 · ' + parts.join(' | ');
+    loadArticles();
+  } catch(e) {
+    statusEl.textContent = '同步失败：' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '↻ 同步 / Sync';
+  }
+}
 </script>
 </body>
 </html>

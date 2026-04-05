@@ -29,11 +29,20 @@
 ### Phase 1: 个人知识库（当前）
 
 ```
-你的原始文档         你的结构化 wiki
-  论文.md       →      _index.md（可搜索）
-  博客.md       →      summaries/（每篇文档）
-  笔记.md       →      concepts/（自动提取）
+你的原始文档               你的结构化 wiki
+  论文.md         →          _index.md（可搜索）
+  博客.md         →          summaries/（每篇文档）
+  笔记.md         →          concepts/（自动提取）
+  zotero 同步     →          raw/zotero-*.md
+  notion 同步     →          raw/notion-*.md
 ```
+
+**四种喂入知识库的方式：**
+
+1. **直接放文件** — 把任意 `.md` 拷进 `raw/` 然后编译
+2. **蒸馏** — 把一个想法、一句话、一段碎片直接结构化进 wiki
+3. **同步 Notion** — 拉取你 Notion 工作区的页面和数据库
+4. **同步 Zotero** — 拉取论文 + 笔记（无笔记的条目自动读取 PDF 全文）
 
 **三种使用方式：**
 
@@ -41,6 +50,8 @@
    ```bash
    uv run main.py compile ./myknowledge
    uv run main.py query "什么是注意力机制？"
+   uv run main.py distill "注意力和记忆检索本质上是一回事" --kb ./myknowledge
+   uv run main.py sync --kb ./myknowledge
    ```
 
 2. **Claude Code skill**（`/shj` 命令）
@@ -49,7 +60,7 @@
    /shj query "什么是注意力机制？"
    ```
 
-3. **Web UI**（流式、模型配置）
+3. **Web UI**（流式、模型配置、知识图谱）
    ```bash
    uv run web/server.py --kb ./myknowledge
    # 打开 http://127.0.0.1:8000
@@ -82,7 +93,7 @@ export OPENAI_API_KEY=sk-...
 # 初始化知识库
 uv run main.py init ./myknowledge
 
-# 导入文档（将来：/shj ingest）
+# 导入文档
 cp ./my-research-notes.md ./myknowledge/raw/
 
 # 编译成 wiki
@@ -99,8 +110,46 @@ uv run main.py query "我关于 transformer 学了什么？" --kb ./myknowledge
 - **增量处理**：SHA-256 哈希跟踪变化，只重编译变更部分
 - **自动摘要**：LLM 为每篇文档生成 150-400 字的摘要
 - **概念提取**：自动从文档中发现 2-8 个核心概念
+- **语义概念合并**：LLM 跨文档去重概念——`"transformer model"` 会合并进 `"transformer"` 而不是创建重复条目
 - **交叉引用**：生成带 `[[wikilinks]]` 的概念文章
 - **状态追踪**：`.wiki_state.json` 支持断点续传
+
+### 蒸馏
+
+把任意碎片输入一条命令变成结构化知识条目：
+
+```bash
+uv run main.py distill "注意力和记忆检索本质上是一回事" --kb ./myknowledge
+```
+
+LLM 把它结构化成带标题、带链接的 wiki 条目，并自动连接到已有概念。
+
+### 同步
+
+从外部来源自动拉取到 `raw/`：
+
+```bash
+uv run main.py sync --kb ./myknowledge          # 所有已配置来源
+uv run main.py sync --source zotero --kb ./myknowledge
+uv run main.py sync --source notion --kb ./myknowledge
+```
+
+**Zotero 同步策略**：
+- 有笔记的条目 → abstract + 笔记 → markdown
+- 无笔记 + 有 PDF 附件 → LLM 读取 PDF 全文 → 结构化 markdown
+- 无笔记 + 无 PDF → 仅 abstract
+
+**Notion 同步**：页面和数据库，增量（跳过未变更页面）。
+
+在 `.shj.config.json` 中配置：
+```json
+{
+  "zotero_api_key": "...",
+  "zotero_user_id": "...",
+  "notion_token": "...",
+  "notion_databases": ["db-id-1"]
+}
+```
 
 ### 查询
 
@@ -108,6 +157,10 @@ uv run main.py query "我关于 transformer 学了什么？" --kb ./myknowledge
 - **选择性阅读**：根据需要拉取 3-7 篇相关全文
 - **引用追踪**：回答包含 `[[wikilink]]` 指向源文章
 - **流式输出**：实时 token 传输
+
+### 知识图谱
+
+在 Web UI 中打开 `/graph`，把你的 wiki 以交互式力导向图展示——节点是摘要和概念，边是 `[[wikilinks]]`。
 
 ### 模型灵活性
 
@@ -120,13 +173,19 @@ uv run main.py query "我关于 transformer 学了什么？" --kb ./myknowledge
 
 通过 CLI 或 Web UI 设置面板配置。配置文件（`.shj.config.json`）被 git 忽略。
 
+## raw 目录
+
+`raw/` 是输入层——你读过的、写过的、想过的所有东西。这里的文件是真正的原始资料，`wiki/` 永远可以从 `raw/` 重新生成。
+
+每个文件的 frontmatter 里应该有 `source_url` 指向原文（DOI、URL、Notion 链接等）。没有外部来源的文件（如蒸馏的想法）本身就是原文。
+
 ## 输出格式
 
 标准 markdown + `[[wikilinks]]`——完全兼容 Obsidian。把 `wiki/` 目录作为 vault 打开，可以：
 - 可视化概念图
 - 反向链接导航
 - 全文搜索
-- 笔记编辑
+- 在编译内容旁边直接记笔记
 
 ## 示例
 
@@ -143,12 +202,13 @@ uv run main.py query "什么是 agent-computer interface？" --kb ./examples
 - **Obsidian 原生**：打开 `wiki/` 目录作为 vault 开箱即用
 - **去中心化**：每个人拥有自己的知识库；分享是可选的
 - **可迁移**：markdown 到处都是——没有锁定
+- **你的知识，不是论文的镜像**：`raw/` 应该反映你的理解——笔记、批注、蒸馏的想法——而不只是原文复制
 
 ## 路线图
 
 | Phase | 重点 | 预期 |
 |-------|------|------|
-| **1** | 核心功能 + 直接 API + Web UI | ✅ 完成 |
+| **1** | 核心编译/查询 + 同步（Notion/Zotero）+ 蒸馏 + Web UI + 知识图谱 | ✅ 完成 |
 | **2** | 公开/私密分离、发布命令、静态站点导出 | 2026 Q2 |
 | **3** | 联邦注册表、跨库查询、全局发现 | 2026 Q3+ |
 

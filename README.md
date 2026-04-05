@@ -29,11 +29,20 @@ Imagine searching across thousands of people's brains — asking a question and 
 ### Phase 1: Personal Knowledge Base (Current)
 
 ```
-Your raw docs          Your structured wiki
-  papers.md       →      _index.md (searchable)
-  blogs.md        →      summaries/ (per document)
-  notes.md        →      concepts/ (auto-extracted)
+Your raw docs              Your structured wiki
+  papers.md       →          _index.md (searchable)
+  blogs.md        →          summaries/ (per document)
+  notes.md        →          concepts/ (auto-extracted)
+  zotero sync     →          raw/zotero-*.md
+  notion sync     →          raw/notion-*.md
 ```
+
+**Four ways to feed your knowledge base:**
+
+1. **Drop files** — copy any `.md` into `raw/` and compile
+2. **Distill** — pipe a thought, sentence, or fragment directly into the wiki
+3. **Sync Notion** — pull pages and databases from your Notion workspace
+4. **Sync Zotero** — pull papers + notes from your Zotero library (with PDF full-text for unannotated items)
 
 **Three ways to use:**
 
@@ -41,6 +50,8 @@ Your raw docs          Your structured wiki
    ```bash
    uv run main.py compile ./myknowledge
    uv run main.py query "What is attention?"
+   uv run main.py distill "attention and memory retrieval are the same thing" --kb ./myknowledge
+   uv run main.py sync --kb ./myknowledge
    ```
 
 2. **Claude Code skill** (`/shj` commands)
@@ -49,7 +60,7 @@ Your raw docs          Your structured wiki
    /shj query "What is attention?"
    ```
 
-3. **Web UI** (streaming, model configuration)
+3. **Web UI** (streaming, model configuration, graph view)
    ```bash
    uv run web/server.py --kb ./myknowledge
    # open http://127.0.0.1:8000
@@ -82,7 +93,7 @@ export OPENAI_API_KEY=sk-...
 # Initialize knowledge base
 uv run main.py init ./myknowledge
 
-# Ingest some documents (future: /shj ingest)
+# Drop some documents
 cp ./my-research-notes.md ./myknowledge/raw/
 
 # Compile into wiki
@@ -99,8 +110,46 @@ uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
 - **Incremental processing**: SHA-256 hashing tracks changes, only re-compiles delta
 - **Auto-summarization**: LLM generates 150-400 word summaries per document
 - **Concept extraction**: Auto-discovers 2-8 key concepts per document
+- **Semantic concept merging**: LLM deduplicates concepts across documents — `"transformer model"` merges into `"transformer"` rather than creating a duplicate
 - **Cross-references**: Generates concept articles with `[[wikilinks]]`
 - **State tracking**: `.wiki_state.json` enables crash recovery
+
+### Distill
+
+Turn any fragment into a structured knowledge entry in one command:
+
+```bash
+uv run main.py distill "attention and memory retrieval are fundamentally the same operation" --kb ./myknowledge
+```
+
+The LLM structures it into a titled, linked wiki entry with connections to existing concepts.
+
+### Sync
+
+Pull from external sources into `raw/` automatically:
+
+```bash
+uv run main.py sync --kb ./myknowledge          # all configured sources
+uv run main.py sync --source zotero --kb ./myknowledge
+uv run main.py sync --source notion --kb ./myknowledge
+```
+
+**Zotero** sync strategy:
+- Items with notes → abstract + notes → markdown
+- Items without notes + PDF attached → full PDF text via LLM → rich markdown
+- Items without notes or PDF → abstract only
+
+**Notion** sync: pages and databases, incremental (skips unchanged pages).
+
+Configure in `.shj.config.json`:
+```json
+{
+  "zotero_api_key": "...",
+  "zotero_user_id": "...",
+  "notion_token": "...",
+  "notion_databases": ["db-id-1"]
+}
+```
 
 ### Query
 
@@ -108,6 +157,10 @@ uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
 - **Selective reading**: Pulls 3-7 relevant full articles on-demand
 - **Citation tracking**: Answers include `[[wikilink]]` references to sources
 - **Streaming output**: Real-time token delivery
+
+### Knowledge Graph
+
+Visual exploration of concepts and their connections. Open `/graph` in the Web UI to see your wiki as an interactive force-directed graph — nodes are summaries and concepts, edges are `[[wikilinks]]`.
 
 ### Model Flexibility
 
@@ -120,13 +173,22 @@ uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
 
 Configure via CLI or Web UI settings panel. Config file (`.shj.config.json`) is git-ignored.
 
+## Raw Directory
+
+`raw/` is the input layer — everything you've read, written, or thought about. Files here are the source of truth; the `wiki/` is always re-derivable from `raw/`.
+
+Each file should have a `source_url` in its frontmatter pointing to the original (DOI, URL, Notion link, etc.). Files without an external source (e.g. distilled thoughts) are themselves the original.
+
 ## Output Format
 
-Standard markdown + `[[wikilinks]]` — fully compatible with Obsidian. Open `wiki/` as a vault for:
+Standard markdown + `[[wikilinks]]` — fully compatible with Obsidian.
+
+**Open in Obsidian:** point Obsidian's vault to the `wiki/` folder inside your KB (e.g. `Open folder as vault → myknowledge/wiki/`). No setup needed — wikilinks, graph view, and backlinks all work out of the box.
+
 - Graph visualization of concepts
 - Backlink navigation
 - Full-text search
-- Note-taking
+- Note-taking alongside compiled content
 
 ## Example
 
@@ -143,12 +205,13 @@ uv run main.py query "What is agent-computer interface?" --kb ./examples
 - **Obsidian-native**: Open `wiki/` as a vault out of the box
 - **Decentralized**: Each person owns their knowledge base; opt-in sharing
 - **Portable**: Markdown everywhere — no lock-in
+- **Your knowledge, not the paper's**: `raw/` should reflect your understanding — notes, highlights, distilled thoughts — not just mirrored full texts
 
 ## Roadmap
 
 | Phase | Focus | Timeline |
 |-------|-------|----------|
-| **1** | Core skill + direct API mode + Web UI | ✅ Done |
+| **1** | Core compile/query + sync (Notion/Zotero) + distill + Web UI + graph | ✅ Done |
 | **2** | Public/private separation, publish command, static site export | Q2 2026 |
 | **3** | Federated registry, cross-KB querying, global discovery | Q3 2026+ |
 

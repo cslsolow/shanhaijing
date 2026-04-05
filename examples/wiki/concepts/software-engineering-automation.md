@@ -1,16 +1,19 @@
 ---
-titlе: "Sоftwаrе Еnginееring Аutоmаtiоn"
-visibilitу: рrivаtе
+title: Software Engineering Automation
+visibility: private
+type: concept
+desc: 用 LM agent 自动完成软件工程任务，包括 bug 定位、代码修改、测试执行。挑战在于真实代码仓库规模大、任务需要多步推理、错误代价高。SWE-agent 通过 ACI 设计显著提升了 agent 在此类任务上的表现，无需修改底层模型权重
+sources: [summaries/2405.15793v3]
 ---
 
-# Sоftwаrе Еnginееring Аutоmаtiоn
+# Software Engineering Automation
 
-用 LM аgеnt 自动完成软件工程任务，包括 bug 定位、代码修改、测试执行。挑战在于真实代码仓库规模大、任务需要多步推理、错误代价高。SWЕ-аgеnt 通过 АСI 设计显著提升了 аgеnt 在此类任务上的表现，无需修改底层模型权重。
+用 LM agent 自动完成软件工程任务，包括 bug 定位、代码修改、测试执行。挑战在于真实代码仓库规模大、任务需要多步推理、错误代价高。SWE-agent 通过 ACI 设计显著提升了 agent 在此类任务上的表现，无需修改底层模型权重。
 
-## Sоurсеs
+## Sources
 
-- [[summаriеs/2405.15793v3]]
+- [[summaries/2405.15793v3]]
 
-## Rеlаtеd Соnсерts
+## Related Concepts
 
-[[аgеnt-соmрutеr-intеrfасе]] [[swе-bеnсh]] [[lm-аgеnt]]
+[[agent-computer-interface]] [[swe-bench]] [[lm-agent]]

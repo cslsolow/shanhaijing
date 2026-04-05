@@ -10,6 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from shanhaijing.config import load as load_config, save as save_config, masked as mask_config
 from shanhaijing.query import stream as _stream_query
+from shanhaijing.distill import run as run_distill
+from shanhaijing.sync import run as run_sync
 
 def stream_query(kb_path, question, model=""):
     return _stream_query(kb_path, question, model)
@@ -42,6 +44,20 @@ def list_articles():
     wiki = Path(KB_PATH) / "wiki"
     if not wiki.exists():
         return jsonify({"articles": []})
+
+    def parse_title(path):
+        try:
+            text = path.read_text(encoding="utf-8")
+            if text.startswith("---"):
+                end = text.find("\n---", 3)
+                if end != -1:
+                    for line in text[3:end].splitlines():
+                        if line.startswith("title:"):
+                            return line.split(":", 1)[1].strip().strip('"')
+        except Exception:
+            pass
+        return path.stem
+
     articles = []
     for md in sorted(wiki.rglob("*.md")):
         rel = md.relative_to(wiki)
@@ -49,7 +65,7 @@ def list_articles():
             continue
         articles.append({
             "path": str(rel),
-            "name": rel.stem,
+            "name": parse_title(md),
             "category": rel.parts[0] if len(rel.parts) > 1 else "root",
         })
     return jsonify({"articles": articles})
@@ -81,6 +97,108 @@ def set_config():
     current.update(data)
     save_config(KB_PATH, current)
     return jsonify({"ok": True})
+
+
+@app.route("/api/sync", methods=["POST"])
+def sync():
+    data = request.get_json(force=True) or {}
+    source = data.get("source")  # "notion" | "zotero" | None (all)
+    auto_compile = data.get("auto_compile", True)
+    sources = [source] if source else None
+    try:
+        result = run_sync(KB_PATH, sources=sources, auto_compile=auto_compile, verbose=False)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/distill", methods=["POST"])
+def distill():
+    data = request.get_json(force=True)
+    text = data.get("input", "").strip()
+    auto_compile = data.get("auto_compile", True)
+    if not text:
+        return jsonify({"error": "empty input"}), 400
+    try:
+        result = run_distill(KB_PATH, text, auto_compile=auto_compile)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/graph")
+def graph_page():
+    return send_file(Path(__file__).parent / "graph.html")
+
+
+@app.route("/api/graph")
+def graph_data():
+    wiki = Path(KB_PATH) / "wiki"
+    if not wiki.exists():
+        return jsonify({"nodes": [], "links": []})
+
+    import re
+    nodes = {}
+    links = []
+
+    def parse_frontmatter(text):
+        if not text.startswith("---"):
+            return {}
+        end = text.find("\n---", 3)
+        if end == -1:
+            return {}
+        fm = {}
+        for line in text[3:end].splitlines():
+            if ":" in line:
+                k, _, v = line.partition(":")
+                fm[k.strip()] = v.strip().strip('"')
+        return fm
+
+    # Build node registry from actual wiki files (with correct category)
+    slug_to_category = {}
+    for md in wiki.rglob("*.md"):
+        rel = md.relative_to(wiki)
+        if rel.name.startswith("_"):
+            continue
+        category = rel.parts[0] if len(rel.parts) > 1 else "root"
+        slug_to_category[rel.stem] = category
+
+    def add_node(slug, fallback_cat, title=None, desc=None):
+        if slug not in nodes:
+            category = slug_to_category.get(slug, fallback_cat)
+            nodes[slug] = {"id": slug, "category": category,
+                           "title": title or slug, "desc": desc or ""}
+
+    seen_links = set()
+    # Known placeholder wikilinks to skip
+    skip_slugs = {"article-name", "wikilink", "concept-name"}
+
+    for md in wiki.rglob("*.md"):
+        rel = md.relative_to(wiki)
+        if rel.name.startswith("_"):
+            continue
+        text = md.read_text(encoding="utf-8")
+        fm = parse_frontmatter(text)
+        slug = rel.stem
+        category = rel.parts[0] if len(rel.parts) > 1 else "root"
+        add_node(slug, category,
+                 title=fm.get("title", slug),
+                 desc=fm.get("desc", ""))
+
+        for target_raw in re.findall(r"\[\[([^\]]+)\]\]", text):
+            target_slug = target_raw.split("/")[-1].strip("`")
+            if target_slug == slug or target_slug in skip_slugs:
+                continue
+            # Only link to nodes that exist in the wiki
+            if target_slug not in slug_to_category:
+                continue
+            add_node(target_slug, "concepts")
+            key = tuple(sorted([slug, target_slug]))
+            if key not in seen_links:
+                seen_links.add(key)
+                links.append({"source": slug, "target": target_slug})
+
+    return jsonify({"nodes": list(nodes.values()), "links": links})
 
 
 @app.route("/api/query", methods=["POST"])

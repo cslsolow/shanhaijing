@@ -9,6 +9,8 @@ dependencies = [
     "pymupdf4llm",
     "anthropic>=0.89.0",
     "openai>=2.30.0",
+    "notion-client>=3.0.0",
+    "pyzotero>=1.11.0",
 ]
 
 [project.scripts]

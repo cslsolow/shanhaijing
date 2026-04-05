@@ -7,9 +7,23 @@ DEFAULTS = {
     "model": "claude-haiku-4-5",
     "base_url": "",
     "api_key": "",
+    # Notion sync
+    "notion_token": "",
+    "notion_databases": [],
+    "notion_pages": [],
+    # Zotero sync
+    "zotero_api_key": "",
+    "zotero_user_id": "",
+    "zotero_group_id": "",
+    "zotero_collections": [],
 }
 
-_FIELDS = ("provider", "model", "base_url", "api_key")
+_LLM_FIELDS = ("provider", "model", "base_url", "api_key")
+_SYNC_FIELDS = (
+    "notion_token", "notion_databases", "notion_pages",
+    "zotero_api_key", "zotero_user_id", "zotero_group_id", "zotero_collections",
+)
+_FIELDS = _LLM_FIELDS + _SYNC_FIELDS
 
 
 def load(kb_path: str) -> dict:
@@ -26,10 +40,11 @@ def save(kb_path: str, cfg: dict):
 
 
 def masked(cfg: dict) -> dict:
-    """Return config safe for API response — mask api_key."""
+    """Return config safe for API response — mask secrets."""
     c = dict(cfg)
-    key = c.get("api_key", "")
-    c["api_key"] = f"...{key[-4:]}" if len(key) > 4 else ("****" if key else "")
+    for secret_key in ("api_key", "notion_token", "zotero_api_key"):
+        val = c.get(secret_key, "")
+        c[secret_key] = f"...{val[-4:]}" if len(val) > 4 else ("****" if val else "")
     return c
 
 

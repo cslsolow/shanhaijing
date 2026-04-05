@@ -33,6 +33,7 @@ def call(cfg: dict, system: str, user: str, max_tokens: int = 1024) -> str:
             model=model, max_tokens=max_tokens,
             system=system,
             messages=[{"role": "user", "content": user}],
+            timeout=60,
         )
         return resp.content[0].text
 
@@ -40,6 +41,7 @@ def call(cfg: dict, system: str, user: str, max_tokens: int = 1024) -> str:
         client = _openai_client(cfg)
         resp = client.chat.completions.create(
             model=model, max_tokens=max_tokens,
+            timeout=60,
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},

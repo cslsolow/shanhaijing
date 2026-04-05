@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>山海经 · 山海界</title>
+<style>
+  :root {
+    --paper:      #f5f0e8;
+    --paper-dark: #ede8df;
+    --ink:        #1a1510;
+    --ink-mid:    #4a3f35;
+    --ink-faint:  #9a8f85;
+    --vermillion: #b83220;
+    --jade:       #2d6b4f;
+    --gold:       #8b6914;
+    --rule:       #d5cfc5;
+    --serif:      'Georgia', 'Noto Serif SC', serif;
+    --sans:       'system-ui', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .header-seal {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--vermillion);
+    opacity: 0.75;
+  }
+  .header h1 {
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    color: var(--ink);
+  }
+  .header-sub {
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-family: var(--sans);
+    font-style: italic;
+  }
+  .header-spacer { flex: 1; }
+  .header-link {
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--ink-faint);
+    text-decoration: none;
+    padding: 5px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .header-link:hover { color: var(--ink); border-color: var(--ink-mid); }
+
+  /* ── Legend ── */
+  .legend {
+    position: absolute;
+    bottom: 24px;
+    left: 24px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 12px 16px;
+    font-size: 11px;
+    font-family: var(--sans);
+    color: var(--ink-mid);
+    z-index: 10;
+    line-height: 1.9;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--ink);
+    max-width: 280px;
+    line-height: 1.5;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 20;
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip-title { font-weight: 600; margin-bottom: 4px; font-size: 13px; }
+  .tooltip-desc { color: var(--ink-mid); }
+  .tooltip-cat {
+    margin-top: 5px;
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ── Controls ── */
+  .controls {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 10;
+  }
+  .ctrl-btn {
+    width: 32px; height: 32px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ink-mid);
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--ink-mid); color: var(--ink); }
+
+  svg { width: 100%; flex: 1; }
+
+  .node circle {
+    stroke-width: 1.5;
+    cursor: pointer;
+    transition: r 0.2s;
+  }
+  .node text {
+    font-family: var(--sans);
+    pointer-events: none;
+    fill: var(--ink);
+  }
+  .node.dimmed circle { opacity: 0.15; }
+  .node.dimmed text   { opacity: 0.1; }
+  .link {
+    stroke: var(--rule);
+    stroke-width: 1;
+    transition: stroke 0.2s;
+  }
+  .link.highlighted { stroke: var(--ink-mid); stroke-width: 1.5; }
+  .link.dimmed      { stroke-opacity: 0.08; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <span class="header-seal">圖</span>
+  <div>
+    <h1>山海界</h1>
+    <div class="header-sub">节点 = 文章 · 边 = 引用关系</div>
+  </div>
+  <div class="header-spacer"></div>
+  <a class="header-link" href="/">← 返回山海经</a>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="zoom-in"  title="放大">+</button>
+  <button class="ctrl-btn" id="zoom-out" title="缩小">−</button>
+  <button class="ctrl-btn" id="zoom-fit" title="重置" style="font-size:12px;">⊡</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#b83220;opacity:0.75"></div> 摘要 Summary</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2d6b4f"></div> 概念 Concept</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8b6914"></div> 碎片 Fragment</div>
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="tt-title"></div>
+  <div class="tooltip-desc"  id="tt-desc"></div>
+  <div class="tooltip-cat"   id="tt-cat"></div>
+</div>
+
+<svg id="graph"></svg>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>
+const COLOR = {
+  summaries: '#b83220',
+  concepts:  '#2d6b4f',
+  fragment:  '#8b6914',
+  root:      '#4a3f35',
+};
+const RADIUS = {
+  summaries: 10,
+  concepts:   7,
+  fragment:   6,
+  root:       7,
+};
+
+const svg    = d3.select('#graph');
+const tooltip = document.getElementById('tooltip');
+const ttTitle = document.getElementById('tt-title');
+const ttDesc  = document.getElementById('tt-desc');
+const ttCat   = document.getElementById('tt-cat');
+
+let width  = svg.node().clientWidth;
+let height = svg.node().clientHeight;
+
+const g    = svg.append('g');
+const zoom = d3.zoom()
+  .scaleExtent([0.15, 4])
+  .on('zoom', e => g.attr('transform', e.transform));
+svg.call(zoom);
+
+// Controls
+document.getElementById('zoom-in') .onclick = () => svg.transition().call(zoom.scaleBy, 1.4);
+document.getElementById('zoom-out').onclick = () => svg.transition().call(zoom.scaleBy, 0.7);
+document.getElementById('zoom-fit').onclick = fitView;
+
+function fitView() {
+  const bounds = g.node().getBBox();
+  if (!bounds.width) return;
+  const pad = 60;
+  const scale = Math.min(
+    (width  - pad * 2) / bounds.width,
+    (height - pad * 2) / bounds.height,
+    1.2
+  );
+  const tx = width  / 2 - scale * (bounds.x + bounds.width  / 2);
+  const ty = height / 2 - scale * (bounds.y + bounds.height / 2);
+  svg.transition().duration(600)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+fetch('/api/graph')
+  .then(r => r.json())
+  .then(({ nodes, links }) => {
+    if (!nodes.length) {
+      g.append('text')
+        .attr('x', width / 2).attr('y', height / 2)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#9a8f85')
+        .attr('font-family', 'var(--sans)')
+        .text('暂无数据，请先运行 compile');
+      return;
+    }
+
+    // Index nodes by id
+    const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+
+    // Adjacency for highlight
+    const adj = {};
+    links.forEach(l => {
+      const s = l.source, t = l.target;
+      (adj[s] || (adj[s] = new Set())).add(t);
+      (adj[t] || (adj[t] = new Set())).add(s);
+    });
+
+    const sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(90).strength(0.4))
+      .force('charge', d3.forceManyBody().strength(-220))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(d => RADIUS[d.category] + 12));
+
+    const link = g.append('g')
+      .selectAll('line')
+      .data(links)
+      .join('line')
+      .attr('class', 'link');
+
+    const node = g.append('g')
+      .selectAll('g')
+      .data(nodes)
+      .join('g')
+      .attr('class', 'node')
+      .call(d3.drag()
+        .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag',  (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end',   (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; })
+      );
+
+    node.append('circle')
+      .attr('r', d => RADIUS[d.category] || 7)
+      .attr('fill', d => COLOR[d.category] || COLOR.root)
+      .attr('fill-opacity', d => d.category === 'summaries' ? 0.75 : 0.65)
+      .attr('stroke', d => COLOR[d.category] || COLOR.root)
+      .attr('stroke-opacity', 0.9);
+
+    node.append('text')
+      .attr('dy', d => -(RADIUS[d.category] || 7) - 5)
+      .attr('text-anchor', 'middle')
+      .attr('font-size', d => d.category === 'summaries' ? 11 : 10)
+      .attr('fill-opacity', 0.85)
+      .text(d => {
+        const label = d.title || d.id;
+        return label.length > 24 ? label.slice(0, 22) + '…' : label;
+      });
+
+    // Hover
+    node
+      .on('mousemove', (e, d) => {
+        ttTitle.textContent = d.title || d.id;
+        ttDesc.textContent  = d.desc  || '';
+        ttCat.textContent   = d.category;
+        tooltip.classList.add('visible');
+        tooltip.style.left = (e.pageX + 14) + 'px';
+        tooltip.style.top  = (e.pageY - 10) + 'px';
+      })
+      .on('mouseleave', () => tooltip.classList.remove('visible'));
+
+    // Click highlight
+    node.on('click', (e, d) => {
+      e.stopPropagation();
+      const neighbors = adj[d.id] || new Set();
+      node.classed('dimmed', n => n.id !== d.id && !neighbors.has(n.id));
+      link.classed('highlighted', l => l.source.id === d.id || l.target.id === d.id);
+      link.classed('dimmed',      l => l.source.id !== d.id && l.target.id !== d.id);
+    });
+
+    svg.on('click', () => {
+      node.classed('dimmed', false);
+      link.classed('highlighted', false).classed('dimmed', false);
+    });
+
+    sim.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    sim.on('end', fitView);
+  });
+
+window.addEventListener('resize', () => {
+  width  = svg.node().clientWidth;
+  height = svg.node().clientHeight;
+});
+</script>
+</body>
+</html>

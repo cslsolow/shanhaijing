@@ -4,6 +4,7 @@ source: "raw/README.md"
 ingested: "2026-04-03"
 visibility: private
 type: note
+desc: "LLM-compiled PKB with incremental compile, no vector DB, Obsidian-compatible wikilinks."
 ---
 
 # Shanhaijing — LLM-compiled Personal Knowledge Base

@@ -21,3 +21,10 @@ CLAUDE.md
 # Knowledge base state & config (user-specific, not committed)
 # .wiki_state.json  — uncomment if you don't want state in git
 .shj.config.json
+
+# Personal dashboard (local only)
+dashboard.html
+.shj.sync.json
+
+# Personal knowledge bases (local only)
+public/
