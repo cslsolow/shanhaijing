@@ -105,6 +105,21 @@ uv run main.py query "What did I learn about transformers?" --kb ./myknowledge
 
 LLM reads the summary index (~10K tokens), selects 3-7 relevant articles, synthesizes an answer with `[[wikilink]]` citations.
 
+### Private Knowledge
+
+Put personal thoughts, research directions, hypotheses, and open questions in `private/` — free-form markdown, no fixed structure:
+
+```
+myknowledge/
+├── raw/          # source documents → compiled into wiki
+├── private/      # your personal thoughts → loaded as background context
+│   ├── research-direction.md
+│   └── open-questions.md
+└── wiki/         # _index.md lists both wiki articles and private paths
+```
+
+`private/` is never compiled by LLM. But during query, all files in `private/` are loaded as background knowledge — so answers are aware of your research context and can give more relevant suggestions.
+
 ### Dream
 
 Every night, the knowledge base dreams. It picks concepts that rarely appear together (high friction), then runs a multi-round LLM evolution: each round adds one more concept and rewrites the previous dream to incorporate it, occasionally "forgetting" a prior claim. The result is a chain of drafts culminating in a final essay that surfaces hidden connections across your knowledge.

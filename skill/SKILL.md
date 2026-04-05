@@ -107,15 +107,13 @@ If non-markdown files (PDF, etc.) are found in `raw/` and have no entry in `.wik
 
 Default model: `claude-haiku-4-5`. Override with `--model <model>` (e.g. `--model claude-sonnet-4-5`).
 
-1. Read `wiki/_index.md` to get the full article inventory (~500 lines ≈ ~10K tokens)
-2. Load all files from `private/` as background context (your research directions, hypotheses, open questions)
-3. From the index, select 3-7 articles most relevant to the question
+1. Read `wiki/_index.md` to get the full article inventory
+2. If `_index.md` contains a `## Private` section, read each listed file as background context — these are the user's personal research directions, hypotheses, and open questions. Load them silently; do not cite them as wiki sources
+3. From the index, select 3-7 wiki articles (summaries/concepts) most relevant to the question
 4. Read those articles
-5. Synthesize answer with `[[wikilink]]` citations pointing to wiki articles, informed by private background
+5. Synthesize answer with `[[wikilink]]` citations pointing to wiki articles, informed by private background where relevant
 6. If insufficient, select additional articles from index (max 2 retrieval rounds)
-7. End with a `## Sources` list of articles consulted
-
-The LLM sees your private thoughts when answering, so suggestions are research-aware and contextual.
+7. End with a `## Sources` section listing wiki articles consulted
 
 ## Lint Workflow
 

@@ -158,6 +158,21 @@ uv run main.py sync --source notion --kb ./myknowledge
 - **引用追踪**：回答包含 `[[wikilink]]` 指向源文章
 - **流式输出**：实时 token 传输
 
+### 私人知识库
+
+把个人想法、科研方向、假设、开放问题放进 `private/`——自由格式的 markdown，没有固定结构：
+
+```
+myknowledge/
+├── raw/          # 原始文档 → 编译进 wiki
+├── private/      # 你的私人想法 → 作为背景知识加载
+│   ├── 科研方向.md
+│   └── 开放问题.md
+└── wiki/         # _index.md 同时列出 wiki 文章和 private 路径
+```
+
+`private/` 永远不会被 LLM 编译。但在查询时，`private/` 下的所有文件会作为背景知识加载——回答时 LLM 已了解你的研究背景，给出的建议更贴合你的方向。
+
 ### 知识图谱
 
 在 Web UI 中打开 `/graph`，把你的 wiki 以交互式力导向图展示——节点是摘要和概念，边是 `[[wikilinks]]`。
