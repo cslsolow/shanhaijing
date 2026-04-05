@@ -37,8 +37,12 @@ The skill operates on this structure:
 │   ├── paper-attention.md
 │   ├── blog-scaling-laws.md
 │   └── notes-2024-03.md
+├── private/                # Personal thoughts, research directions, hypotheses
+│   ├── my-thesis-direction.md
+│   ├── open-questions.md
+│   └── intuitions-2024.md
 ├── wiki/                   # LLM-managed output (user should not edit)
-│   ├── _index.md           # Master index: one-line description per article
+│   ├── _index.md           # Master index: summaries + concepts + private paths
 │   ├── summaries/          # One summary per raw file
 │   │   ├── paper-attention.md
 │   │   └── blog-scaling-laws.md
@@ -47,6 +51,8 @@ The skill operates on this structure:
 │       └── attention-mechanism.md
 └── .wiki_state.json        # Compilation state tracker
 ```
+
+**Key**: `private/` is NOT compiled (no LLM-generated summaries). But it's listed in `_index.md` and loaded as background context during `query` so the LLM can give you research-aware suggestions.
 
 ## Init Workflow
 
@@ -102,11 +108,14 @@ If non-markdown files (PDF, etc.) are found in `raw/` and have no entry in `.wik
 Default model: `claude-haiku-4-5`. Override with `--model <model>` (e.g. `--model claude-sonnet-4-5`).
 
 1. Read `wiki/_index.md` to get the full article inventory (~500 lines ≈ ~10K tokens)
-2. From the index, select 3-7 articles most relevant to the question
-3. Read those articles
-4. Synthesize answer with `[[wikilink]]` citations pointing to wiki articles
-5. If insufficient, select additional articles from index (max 2 retrieval rounds)
-6. End with a `## Sources` list of articles consulted
+2. Load all files from `private/` as background context (your research directions, hypotheses, open questions)
+3. From the index, select 3-7 articles most relevant to the question
+4. Read those articles
+5. Synthesize answer with `[[wikilink]]` citations pointing to wiki articles, informed by private background
+6. If insufficient, select additional articles from index (max 2 retrieval rounds)
+7. End with a `## Sources` list of articles consulted
+
+The LLM sees your private thoughts when answering, so suggestions are research-aware and contextual.
 
 ## Lint Workflow
 

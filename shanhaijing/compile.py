@@ -74,15 +74,50 @@ def _slugify(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
+def _tokens(slug: str) -> set[str]:
+    return set(re.split(r"[-]+", slug.lower())) - {"", "a", "an", "the", "of", "for", "in", "on"}
+
+
+def _candidates(new_slug: str, existing_slugs: list[str], top_k: int = 20) -> list[str]:
+    new_toks = _tokens(new_slug)
+    if not new_toks:
+        return existing_slugs[:top_k]
+    scored = []
+    for s in existing_slugs:
+        overlap = len(new_toks & _tokens(s))
+        if overlap > 0:
+            scored.append((overlap, s))
+    scored.sort(key=lambda x: -x[0])
+    return [s for _, s in scored[:top_k]]
+
+
 def _resolve_concepts(cfg, new_concepts: list[str], existing_slugs: list[str]) -> list[dict]:
-    """Ask LLM to map each new concept to an existing slug or a new slug."""
+    """Ask LLM to map each new concept to an existing slug or a new slug.
+
+    Uses token-overlap pre-filtering to pass only top-K candidates per concept,
+    keeping the prompt small regardless of how large existing_slugs grows.
+    """
     if not new_concepts:
         return []
     if not existing_slugs:
         return [{"input": c, "action": "create", "target": _slugify(c)} for c in new_concepts]
 
+    # Build per-concept candidate lists via token overlap
+    concept_candidates = {
+        c: _candidates(_slugify(c), existing_slugs)
+        for c in new_concepts
+    }
+    # Union of all candidates — deduplicated, order preserved
+    seen = set()
+    union_candidates = []
+    for cands in concept_candidates.values():
+        for s in cands:
+            if s not in seen:
+                seen.add(s)
+                union_candidates.append(s)
+
     prompt = (
-        f"Existing concepts: {json.dumps(existing_slugs)}\n\n"
+        f"Existing concepts (pre-filtered candidates): {json.dumps(union_candidates)}\n\n"
         f"New concepts: {json.dumps(new_concepts)}"
     )
     raw = llm.call(cfg, CONCEPT_RESOLVE_SYSTEM, prompt, max_tokens=400)
@@ -90,13 +125,11 @@ def _resolve_concepts(cfg, new_concepts: list[str], existing_slugs: list[str]) -
         start = raw.index("[")
         end = raw.rindex("]") + 1
         decisions = json.loads(raw[start:end])
-        # validate shape
         return [
             d for d in decisions
             if isinstance(d, dict) and d.get("action") in ("merge", "create") and d.get("target")
         ]
     except (ValueError, json.JSONDecodeError):
-        # fallback: create all as new
         return [{"input": c, "action": "create", "target": _slugify(c)} for c in new_concepts]
 
 
@@ -291,5 +324,19 @@ def _rebuild_index(wiki: Path, st: dict):
             srcs_part = f"  `src:{srcs}`" if srcs else ""
             lines.append(f"- [{title}](concepts/{p.name}){desc_part}{srcs_part}")
         lines.append("")
+
+    private_dir = Path(wiki.parent) / "private"
+    if private_dir.exists():
+        private_files = sorted(private_dir.glob("*.md"))
+        if private_files:
+            lines.append("## Private (Background Knowledge)")
+            lines.append("")
+            for p in private_files:
+                fm = _extract_frontmatter(p)
+                title = fm.get("title") or p.stem.replace("-", " ").title()
+                desc  = fm.get("desc", "")
+                desc_part = f" — {desc}" if desc else ""
+                lines.append(f"- [{title}](../private/{p.name}){desc_part}")
+            lines.append("")
 
     (wiki / "_index.md").write_text("\n".join(lines), encoding="utf-8")

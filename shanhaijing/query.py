@@ -53,7 +53,23 @@ def stream(kb_path: str, question: str, model_override: str = "") -> Generator[d
         parts = [f"### _index.md\n\n{index}"]
 
     context = "\n\n---\n\n".join(parts)
-    user_msg = f"Articles:\n\n{context}\n\nQuestion: {question}"
+
+    # Load private/ as background knowledge for better context
+    private_context = ""
+    private_dir = Path(kb_path) / "private"
+    if private_dir.exists():
+        private_files = sorted(private_dir.glob("*.md"))
+        if private_files:
+            private_parts = []
+            for p in private_files:
+                content = p.read_text(encoding="utf-8")
+                private_parts.append(f"### {p.name}\n\n{content}")
+            private_context = "\n\n---\n\n".join(private_parts)
+
+    if private_context:
+        user_msg = f"Background Knowledge (Your Research):\n\n{private_context}\n\n---\n\nArticles:\n\n{context}\n\nQuestion: {question}"
+    else:
+        user_msg = f"Articles:\n\n{context}\n\nQuestion: {question}"
 
     for chunk in llm.stream(cfg, ANSWER_SYSTEM, user_msg):
         yield {"chunk": chunk}
