@@ -189,59 +189,60 @@ def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
 
         return rel, slug, summary, concepts
 
-    # Phase 1: parallel summary + concept extraction
-    results = []
+    def process_and_merge(rel):
+        """Phase 1 + Phase 2 inline: extract concepts then immediately merge/create."""
+        nonlocal new_concepts
+        rel, slug, summary, concepts = process_file(rel)
+
+        with lock:
+            existing_slugs = [p.stem for p in (wiki / "concepts").glob("*.md")]
+            decisions = _resolve_concepts(cfg, concepts[:8], existing_slugs)
+
+            for d in decisions:
+                concept_slug = d["target"]
+                concept_path = wiki / "concepts" / f"{concept_slug}.md"
+                if d["action"] == "merge" and concept_path.exists():
+                    existing = concept_path.read_text(encoding="utf-8")
+                    updated = llm.call(cfg, CONCEPT_UPDATE_SYSTEM,
+                                       f"Article:\n{existing}\n\nNew source: {slug}.md\nSummary excerpt:\n{summary[:500]}",
+                                       max_tokens=800)
+                    concept_path.write_text(updated, encoding="utf-8")
+                    if verbose:
+                        print(f"    ~ concept merged: {d['input']} → {concept_slug}")
+                else:
+                    article = llm.call(cfg, CONCEPT_ARTICLE_SYSTEM,
+                                       f"Concept: {d['input']}\n\nSource: {slug}.md\nSummary:\n{summary}",
+                                       max_tokens=800)
+                    concept_path.write_text(article, encoding="utf-8")
+                    new_concepts += 1
+                    if verbose:
+                        print(f"    + concept: {concept_slug}")
+
+                st.setdefault("concepts", {})[concept_slug] = {
+                    "slug": concept_slug,
+                    "sources": list(set(
+                        st.get("concepts", {}).get(concept_slug, {}).get("sources", []) + [slug]
+                    )),
+                }
+
+            st.setdefault("files", {})[rel] = {
+                "hash": state.file_hash(Path(kb_path) / rel),
+                "summary": f"summaries/{slug}.md",
+                "concepts": [d["target"] for d in decisions],
+            }
+            state.save(kb_path, st)
+            if verbose:
+                print(f"  ✓ {rel}")
+
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(process_file, rel): rel for rel in to_process}
+        futures = {executor.submit(process_and_merge, rel): rel for rel in to_process}
         for future in as_completed(futures):
             rel = futures[future]
             try:
-                results.append(future.result())
-                if verbose:
-                    print(f"  ✓ {rel}")
+                future.result()
             except Exception as e:
                 if verbose:
                     print(f"  ✗ {rel}: {e}")
-
-    # Phase 2: serial concept merge/create (shared concept directory)
-    for rel, slug, summary, concepts in results:
-        existing_slugs = [p.stem for p in (wiki / "concepts").glob("*.md")]
-        decisions = _resolve_concepts(cfg, concepts[:8], existing_slugs)
-
-        for d in decisions:
-            concept_slug = d["target"]
-            concept_path = wiki / "concepts" / f"{concept_slug}.md"
-            if d["action"] == "merge" and concept_path.exists():
-                existing = concept_path.read_text(encoding="utf-8")
-                updated = llm.call(cfg, CONCEPT_UPDATE_SYSTEM,
-                                   f"Article:\n{existing}\n\nNew source: {slug}.md\nSummary excerpt:\n{summary[:500]}",
-                                   max_tokens=800)
-                concept_path.write_text(updated, encoding="utf-8")
-                if verbose:
-                    print(f"    ~ concept merged: {d['input']} → {concept_slug}")
-            else:
-                article = llm.call(cfg, CONCEPT_ARTICLE_SYSTEM,
-                                   f"Concept: {d['input']}\n\nSource: {slug}.md\nSummary:\n{summary}",
-                                   max_tokens=800)
-                concept_path.write_text(article, encoding="utf-8")
-                new_concepts += 1
-                if verbose:
-                    print(f"    + concept: {concept_slug}")
-
-            st.setdefault("concepts", {})[concept_slug] = {
-                "slug": concept_slug,
-                "sources": list(set(
-                    st.get("concepts", {}).get(concept_slug, {}).get("sources", []) + [slug]
-                )),
-            }
-
-        st.setdefault("files", {})[rel] = {
-            "hash": state.file_hash(Path(kb_path) / rel),
-            "summary": f"summaries/{slug}.md",
-            "concepts": [d["target"] for d in decisions],
-        }
-        # Persist state after each file so progress survives interruption
-        state.save(kb_path, st)
 
     # Handle deletions
     for rel in deleted_files:
