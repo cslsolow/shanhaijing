@@ -149,6 +149,8 @@ def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
 
     st = state.load(kb_path)
     new_concepts = 0
+    done_count = 0
+    total = len(to_process)
     lock = threading.Lock()
 
     def process_file(rel):
@@ -156,8 +158,6 @@ def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
         p = Path(kb_path) / rel
         content = p.read_text(encoding="utf-8")
 
-        # 1. Summary — skip LLM if summary already pre-populated
-        # raw stem may have "zotero-" prefix; strip it to find pre-copied summary
         slug = p.stem
         stripped_stem = re.sub(r"^zotero-", "", slug)
         prebuilt = wiki / "summaries" / f"{stripped_stem}.md"
@@ -177,7 +177,6 @@ def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
             summary_path = wiki / "summaries" / f"{slug}.md"
             summary_path.write_text(summary, encoding="utf-8")
 
-        # 2. Extract concepts
         concepts_raw = llm.call(cfg, CONCEPTS_SYSTEM,
                                 f"Summary:\n{summary}", max_tokens=200)
         try:
@@ -190,30 +189,45 @@ def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
         return rel, slug, summary, concepts
 
     def process_and_merge(rel):
-        """Phase 1 + Phase 2 inline: extract concepts then immediately merge/create."""
-        nonlocal new_concepts
-        rel, slug, summary, concepts = process_file(rel)
+        """Phase 1 + Phase 2: summary/concepts parallel, concept LLM calls outside lock."""
+        nonlocal new_concepts, done_count
+        rel, slug, summary, raw_concepts = process_file(rel)
 
+        # Resolve decisions inside lock (needs consistent view of existing slugs)
         with lock:
             existing_slugs = [p.stem for p in (wiki / "concepts").glob("*.md")]
-            decisions = _resolve_concepts(cfg, concepts[:8], existing_slugs)
-
+            decisions = _resolve_concepts(cfg, raw_concepts[:8], existing_slugs)
+            # Reserve concept paths to prevent races on new concepts
+            reserved = set()
             for d in decisions:
-                concept_slug = d["target"]
-                concept_path = wiki / "concepts" / f"{concept_slug}.md"
-                if d["action"] == "merge" and concept_path.exists():
-                    existing = concept_path.read_text(encoding="utf-8")
-                    updated = llm.call(cfg, CONCEPT_UPDATE_SYSTEM,
-                                       f"Article:\n{existing}\n\nNew source: {slug}.md\nSummary excerpt:\n{summary[:500]}",
-                                       max_tokens=800)
-                    concept_path.write_text(updated, encoding="utf-8")
+                if d["action"] != "merge":
+                    reserved.add(d["target"])
+
+        # Generate all concept articles/updates outside lock (pure LLM, no shared state)
+        concept_results = []
+        for d in decisions:
+            concept_slug = d["target"]
+            concept_path = wiki / "concepts" / f"{concept_slug}.md"
+            if d["action"] == "merge" and concept_path.exists():
+                existing = concept_path.read_text(encoding="utf-8")
+                updated = llm.call(cfg, CONCEPT_UPDATE_SYSTEM,
+                                   f"Article:\n{existing}\n\nNew source: {slug}.md\nSummary excerpt:\n{summary[:500]}",
+                                   max_tokens=800)
+                concept_results.append(("merge", concept_slug, concept_path, updated, d["input"]))
+            else:
+                article = llm.call(cfg, CONCEPT_ARTICLE_SYSTEM,
+                                   f"Concept: {d['input']}\n\nSource: {slug}.md\nSummary:\n{summary}",
+                                   max_tokens=800)
+                concept_results.append(("create", concept_slug, concept_path, article, d["input"]))
+
+        # Write results and update state inside lock
+        with lock:
+            for action, concept_slug, concept_path, content, input_name in concept_results:
+                concept_path.write_text(content, encoding="utf-8")
+                if action == "merge":
                     if verbose:
-                        print(f"    ~ concept merged: {d['input']} → {concept_slug}")
+                        print(f"    ~ concept merged: {input_name} → {concept_slug}")
                 else:
-                    article = llm.call(cfg, CONCEPT_ARTICLE_SYSTEM,
-                                       f"Concept: {d['input']}\n\nSource: {slug}.md\nSummary:\n{summary}",
-                                       max_tokens=800)
-                    concept_path.write_text(article, encoding="utf-8")
                     new_concepts += 1
                     if verbose:
                         print(f"    + concept: {concept_slug}")
@@ -231,8 +245,9 @@ def run(kb_path: str, verbose: bool = True, workers: int = 8) -> dict:
                 "concepts": [d["target"] for d in decisions],
             }
             state.save(kb_path, st)
+            done_count += 1
             if verbose:
-                print(f"  ✓ {rel}")
+                print(f"  [{done_count}/{total}] ✓ {rel}")
 
     with ThreadPoolExecutor(max_workers=workers) as executor:
         futures = {executor.submit(process_and_merge, rel): rel for rel in to_process}
